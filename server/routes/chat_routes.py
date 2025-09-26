@@ -2,8 +2,8 @@ from flask import Blueprint, request, jsonify
 from db.config import supabase
 from routes.auth_routes import verify_jwt_token
 from utils.guardrails import guardrails_service
-from utils.mood_analysis import mood_analyzer
-from utils.educational_responses import educational_service
+from utils.llm_mood_analysis import llm_mood_analyzer
+from utils.llm_response_generator import llm_response_generator
 from utils.conversation_context import context_manager
 from datetime import datetime
 import uuid
@@ -230,6 +230,7 @@ def process_user_message(session_id):
         
         # Get user preferences for personalization
         user_preferences = {
+            'user_id': user['id'],
             'name': user.get('name'),
             'morning_preference': user.get('morning_preference'),
             'life_genre': user.get('life_genre'),
@@ -304,25 +305,42 @@ def process_user_message(session_id):
         return jsonify({'error': f'Failed to process message: {str(e)}'}), 500
 
 def _generate_ai_response(processing_results: dict, user_preferences: dict, session_id: str) -> dict:
-    """Generate AI response based on processing results"""
-    response_guidance = processing_results.get('response_guidance', {})
+    """Generate AI response using LLM-based services"""
     mood_analysis = processing_results.get('mood_analysis', {})
     current_mood = mood_analysis.get('mood', 'neutral')
     
-    # Check if educational response is needed
-    if processing_results.get('response_type') == 'educational':
-        educational_response = processing_results.get('educational_response', {})
-        content = educational_response.get('content', 'I understand you\'re curious about this topic. Let me help you explore it in a positive way.')
-        response_type = 'educational'
-    else:
-        # Generate normal response based on mood
-        content = _generate_mood_based_response(current_mood, user_preferences, response_guidance)
-        response_type = 'normal'
+    # Get the original user message from processing results
+    user_message = processing_results.get('original_message', '')
     
-    # Add buddy personality
-    content = educational_service.generate_buddy_response(
-        content, current_mood, response_guidance, user_preferences
+    # Get conversation context
+    user_id = user_preferences.get('user_id') or processing_results.get('user_id')
+    context = context_manager.get_context(user_id, session_id, user_preferences)
+    
+    # Convert context to serializable format
+    try:
+        serializable_context = context.to_dict()
+    except Exception as e:
+        print(f"Context serialization error: {e}")
+        # Fallback to empty context
+        serializable_context = {
+            'conversation_history': [],
+            'current_mood': 'neutral',
+            'mood_history': [],
+            'topics_discussed': [],
+            'educational_topics_covered': [],
+            'user_preferences': {}
+        }
+    
+    # Generate response using LLM
+    content = llm_response_generator.generate_response(
+        user_message, 
+        mood_analysis, 
+        user_preferences, 
+        serializable_context
     )
+    
+    # Determine response type based on processing results
+    response_type = processing_results.get('response_type', 'normal')
     
     return {
         'content': content,
@@ -330,23 +348,6 @@ def _generate_ai_response(processing_results: dict, user_preferences: dict, sess
         'response_type': response_type
     }
 
-def _generate_mood_based_response(mood: str, user_preferences: dict, guidance: dict) -> str:
-    """Generate response based on detected mood"""
-    mood_responses = {
-        'happy': "I love your positive energy! What else would you like to explore or talk about?",
-        'sad': "I'm here for you. Sometimes it helps to talk about what's on your mind. What's been going on?",
-        'curious': "That's a great question! I'm excited to help you learn more about this topic.",
-        'supportive': "I'm here to help and support you. What would you like to discuss?",
-        'neutral': "I'm here to chat! What's on your mind today?"
-    }
-    
-    base_response = mood_responses.get(mood, mood_responses['neutral'])
-    
-    # Add personalization based on user preferences
-    if user_preferences.get('name'):
-        base_response = f"Hey {user_preferences['name']}, {base_response.lower()}"
-    
-    return base_response
 
 @chat_bp.route('/sessions/<session_id>/context', methods=['GET'])
 def get_conversation_context(session_id):

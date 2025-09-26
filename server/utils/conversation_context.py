@@ -147,6 +147,20 @@ class ConversationContext:
             'last_activity': self.last_activity.isoformat()
         }
     
+    def to_dict(self) -> Dict:
+        """Convert context to serializable dictionary"""
+        return {
+            'user_id': self.user_id,
+            'session_id': self.session_id,
+            'user_preferences': self.user_preferences,
+            'conversation_history': self.conversation_history,
+            'current_mood': self.current_mood,
+            'mood_history': self.mood_history,
+            'topics_discussed': self.topics_discussed,
+            'educational_topics_covered': self.educational_topics_covered,
+            'last_activity': self.last_activity.isoformat()
+        }
+    
     @classmethod
     def from_dict(cls, data: Dict):
         """Create context from dictionary"""

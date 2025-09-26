@@ -6,8 +6,8 @@ Now includes educational responses instead of blocking
 from typing import Dict, Tuple, Optional, List
 from .pii_guard import pii_guard
 from .input_guard import input_guard
-from .mood_analysis import mood_analyzer
-from .educational_responses import educational_service
+from .llm_mood_analysis import llm_mood_analyzer
+from .llm_response_generator import llm_response_generator
 from .conversation_context import context_manager
 
 class GuardrailsService:
@@ -65,7 +65,7 @@ class GuardrailsService:
                 conversation_history = context.get_recent_context()
             
             # Mood Analysis
-            mood_analysis = mood_analyzer.analyze_mood(message, conversation_history)
+            mood_analysis = llm_mood_analyzer.analyze_mood(message, conversation_history)
             results['mood_analysis'] = mood_analysis
             
             # Input Validation
@@ -159,10 +159,25 @@ class GuardrailsService:
         # Determine content type based on found keywords
         content_type = self._classify_content_type(content_results.get('found_keywords', []))
         
-        # Generate educational response
-        educational_response = educational_service.generate_educational_response(
-            content_type, user_preferences, mood_analysis
+        # Generate educational response using LLM
+        from .llm_response_generator import llm_response_generator
+        
+        # Create a simple educational prompt for LLM
+        educational_prompt = f"Generate an educational, supportive response for someone asking about: {content_type}. Be helpful and informative while maintaining appropriate boundaries."
+        
+        educational_content = llm_response_generator.generate_response(
+            educational_prompt,
+            mood_analysis,
+            user_preferences,
+            {}
         )
+        
+        educational_response = {
+            'content': educational_content,
+            'educational_value': True,
+            'tone': 'supportive',
+            'approach': 'gentle_guidance'
+        }
         
         # Add mood-based personalization
         if mood_analysis.get('mood') in ['sad', 'supportive']:
@@ -212,8 +227,8 @@ class GuardrailsService:
             message, user_id, session_id, user_preferences
         )
         
-        # Analyze mood
-        mood_analysis = guardrails_results.get('mood_analysis', {})
+        # Analyze mood using LLM
+        mood_analysis = llm_mood_analyzer.analyze_mood(message, conversation_history)
         current_mood = mood_analysis.get('mood', 'neutral')
         mood_confidence = mood_analysis.get('confidence', 0.0)
         
@@ -236,10 +251,12 @@ class GuardrailsService:
         
         return {
             **guardrails_results,
+            'mood_analysis': mood_analysis,
             'response_guidance': response_guidance,
             'should_redirect': should_redirect,
             'redirect_suggestions': redirect_suggestions,
-            'context_summary': context_manager.get_context_summary(session_id)
+            'context_summary': context_manager.get_context_summary(session_id),
+            'original_message': message
         }
     
     def _generate_response_guidance(self, guardrails_results: Dict, mood_analysis: Dict, context) -> Dict:
@@ -248,7 +265,11 @@ class GuardrailsService:
         confidence = mood_analysis.get('confidence', 0.0)
         
         # Get mood-based guidance
-        guidance = mood_analyzer.get_mood_based_response_guidance(mood, {}, context.user_preferences)
+        guidance = {
+            'mood': mood,
+            'tone': 'supportive' if mood == 'sad' else 'friendly',
+            'approach': 'empathetic' if mood == 'sad' else 'conversational'
+        }
         
         # Add educational response guidance if needed
         if guardrails_results.get('response_type') == 'educational':
@@ -259,6 +280,35 @@ class GuardrailsService:
         if context.topics_discussed:
             guidance['context_aware'] = True
             guidance['recent_topics'] = context.topics_discussed[-3:]
+        
+        return guidance
+    
+    def _get_mood_based_response_guidance(self, mood: str, context: Dict, user_preferences: Dict) -> Dict:
+        """Get mood-based response guidance"""
+        guidance = {
+            'mood': mood,
+            'tone': 'supportive' if mood == 'sad' else 'friendly',
+            'approach': 'empathetic' if mood == 'sad' else 'conversational'
+        }
+        
+        if mood == 'sad':
+            guidance.update({
+                'tone': 'supportive',
+                'approach': 'empathetic',
+                'focus': 'emotional_support'
+            })
+        elif mood == 'curious':
+            guidance.update({
+                'tone': 'educational',
+                'approach': 'informative',
+                'focus': 'learning'
+            })
+        elif mood == 'happy':
+            guidance.update({
+                'tone': 'enthusiastic',
+                'approach': 'energetic',
+                'focus': 'positive_engagement'
+            })
         
         return guidance
     
