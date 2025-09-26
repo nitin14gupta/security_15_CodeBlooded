@@ -9,7 +9,6 @@ class InputGuard:
     def __init__(self):
         """Initialize toxicity detection and validation rules"""
         try:
-            # Initialize Detoxify for toxicity detection
             self.toxicity_model = Detoxify('original')
             self.toxicity_initialized = True
         except Exception as e:
@@ -17,37 +16,33 @@ class InputGuard:
             self.toxicity_model = None
             self.toxicity_initialized = False
         
-        # Define restricted topics and patterns
         self.restricted_topics = [
             'violence', 'hate speech', 'discrimination', 'harassment',
             'illegal activities', 'drug abuse', 'self harm', 'suicide',
             'terrorism', 'weapons', 'explicit content', 'grooming'
         ]
         
-        # Define restricted keywords (case-insensitive)
         self.restricted_keywords = [
             'kill', 'murder', 'suicide', 'bomb', 'terrorist', 'hate',
             'discriminate', 'harass', 'abuse', 'violence', 'weapon',
             'drug', 'illegal', 'explicit', 'porn', 'groom'
         ]
         
-        # Input validation rules
         self.validation_rules = {
-            'max_length': 2000,  # Maximum message length
-            'min_length': 1,     # Minimum message length
-            'max_words': 300,    # Maximum word count
-            'min_words': 1,      # Minimum word count
-            'max_lines': 20,    # Maximum number of lines
+            'max_length': 2000,
+            'min_length': 1,
+            'max_words': 300,
+            'min_words': 1,
+            'max_lines': 20,
             'allowed_chars': r'^[a-zA-Z0-9\s\.,!?@#$%^&*()_+\-=\[\]{}|;:"<>/~`\n\r]*$'
         }
         
-        # Spam patterns
         self.spam_patterns = [
-            r'(.)\1{4,}',  # Repeated characters (5+ times)
-            r'https?://\S+',  # URLs (can be configured to allow/block)
-            r'@\w+',  # Mentions
-            r'#\w+',  # Hashtags
-            r'\b[A-Z]{3,}\b',  # Excessive caps
+            r'(.)\1{4,}',
+            r'https?://\S+',
+            r'@\w+',
+            r'#\w+',
+            r'\b[A-Z]{3,}\b',
         ]
     
     def detect_toxicity(self, text: str, threshold: float = 0.7) -> Dict:
@@ -70,14 +65,11 @@ class InputGuard:
             }
         
         try:
-            # Get toxicity predictions
             results = self.toxicity_model.predict(text)
             
-            # Find the maximum toxicity score
             max_score = max(results.values())
             max_category = max(results, key=results.get)
             
-            # Determine if text is toxic
             is_toxic = max_score >= threshold
             
             return {
@@ -113,7 +105,6 @@ class InputGuard:
             'stats': {}
         }
         
-        # Basic stats
         validation_results['stats'] = {
             'length': len(text),
             'word_count': len(text.split()),
@@ -121,7 +112,6 @@ class InputGuard:
             'char_count': len(text.replace(' ', ''))
         }
         
-        # Length validation
         if len(text) < self.validation_rules['min_length']:
             validation_results['violations'].append({
                 'type': 'min_length',
@@ -140,7 +130,6 @@ class InputGuard:
             })
             validation_results['is_valid'] = False
         
-        # Word count validation
         word_count = len(text.split())
         if word_count < self.validation_rules['min_words']:
             validation_results['violations'].append({
@@ -160,7 +149,6 @@ class InputGuard:
             })
             validation_results['is_valid'] = False
         
-        # Line count validation
         line_count = len(text.split('\n'))
         if line_count > self.validation_rules['max_lines']:
             validation_results['violations'].append({
@@ -171,7 +159,6 @@ class InputGuard:
             })
             validation_results['is_valid'] = False
         
-        # Character validation
         if not re.match(self.validation_rules['allowed_chars'], text):
             validation_results['violations'].append({
                 'type': 'invalid_chars',
@@ -194,33 +181,31 @@ class InputGuard:
         """
         text_lower = text.lower()
         
-        # Check for restricted keywords
         found_keywords = []
         for keyword in self.restricted_keywords:
             if keyword.lower() in text_lower:
                 found_keywords.append(keyword)
         
-        # Check for spam patterns
         spam_detected = []
         for pattern in self.spam_patterns:
             matches = re.findall(pattern, text)
             if matches:
                 spam_detected.append({
                     'pattern': pattern,
-                    'matches': matches[:5]  # Limit to first 5 matches
+                    'matches': matches[:5]
                 })
         
         # Check for excessive repetition
         repetition_warning = False
         words = text.split()
-        if len(words) > 10:  # Only check if message has enough words
+        if len(words) > 10:
             word_counts = {}
             for word in words:
                 word_counts[word] = word_counts.get(word, 0) + 1
             
-            # Check for words that appear too frequently
+            # Check words that appear too frequently
             for word, count in word_counts.items():
-                if count > len(words) * 0.3:  # Word appears in more than 30% of message
+                if count > len(words) * 0.3:
                     repetition_warning = True
                     break
         
@@ -254,19 +239,16 @@ class InputGuard:
         Returns:
             Dict: Comprehensive analysis results
         """
-        # Perform all checks
         toxicity_results = self.detect_toxicity(text, toxicity_threshold)
         validation_results = self.validate_input(text)
         content_results = self.check_restricted_content(text)
         
-        # Determine overall safety
         is_safe = (
             not toxicity_results.get('is_toxic', False) and
             validation_results['is_valid'] and
             not content_results['has_restricted_content']
         )
         
-        # Generate recommendations
         recommendations = []
         if toxicity_results.get('is_toxic'):
             recommendations.append("Message contains toxic content. Please revise your message.")
@@ -293,5 +275,4 @@ class InputGuard:
             }
         }
 
-# Global instance
 input_guard = InputGuard()

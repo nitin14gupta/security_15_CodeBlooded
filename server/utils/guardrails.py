@@ -48,7 +48,7 @@ class GuardrailsService:
         }
         
         try:
-            # Step 1: Input Validation
+            # Input Validation
             if self.config['enable_input_validation']:
                 validation_results = self.input_guard.validate_input(message)
                 if not validation_results['is_valid']:
@@ -58,7 +58,7 @@ class GuardrailsService:
                     results['processing_log'].append("Input validation failed")
                     return results
             
-            # Step 2: Toxicity Detection
+            #Toxicity Detection
             if self.config['enable_toxicity_detection']:
                 toxicity_results = self.input_guard.detect_toxicity(
                     message, 
@@ -74,7 +74,7 @@ class GuardrailsService:
                     results['processing_log'].append("Toxicity detected")
                     return results
             
-            # Step 3: Restricted Content Check
+            #Restricted Content Check
             content_results = self.input_guard.check_restricted_content(message)
             if content_results['has_restricted_content']:
                 results['should_block'] = True
@@ -82,7 +82,7 @@ class GuardrailsService:
                 results['processing_log'].append("Restricted content detected")
                 return results
             
-            # Step 4: PII Detection and Scrubbing
+            #PII Detection and Scrubbing
             pii_summary = self.pii_guard.get_pii_summary(message)
             if pii_summary.get('has_pii', False):
                 results['pii_detected'] = True
@@ -91,22 +91,19 @@ class GuardrailsService:
                 )
                 results['processing_log'].append("PII detected")
                 
-                # Scrub PII if enabled
+                # Scrub PII
                 if self.config['enable_pii_scrubbing']:
                     scrubbed_message, scrub_info = self.pii_guard.scrub_pii(message)
                     results['processed_message'] = scrubbed_message
                     results['pii_scrubbed'] = True
                     results['processing_log'].append("PII scrubbed from message")
                 else:
-                    # Block message if PII scrubbing is disabled
                     results['should_block'] = True
                     results['warnings'].append("Message contains PII and scrubbing is disabled")
                     return results
             
-            # Step 5: Final Safety Assessment
             results['is_safe'] = not results['should_block']
             
-            # Determine risk level
             risk_factors = []
             if results['pii_detected']:
                 risk_factors.append('PII')
@@ -149,23 +146,18 @@ class GuardrailsService:
         }
         
         try:
-            # Toxicity analysis
             toxicity_results = self.input_guard.detect_toxicity(message, self.config['toxicity_threshold'])
             report['safety_checks']['toxicity'] = toxicity_results
             
-            # PII analysis
             pii_results = self.pii_guard.detect_pii(message)
             report['safety_checks']['pii'] = pii_results
             
-            # Content analysis
             content_results = self.input_guard.check_restricted_content(message)
             report['safety_checks']['content'] = content_results
             
-            # Input validation
             validation_results = self.input_guard.validate_input(message)
             report['safety_checks']['validation'] = validation_results
             
-            # Overall assessment
             is_safe = (
                 not toxicity_results.get('is_toxic', False) and
                 validation_results['is_valid'] and
@@ -202,5 +194,4 @@ class GuardrailsService:
         """Get current guardrails configuration"""
         return self.config.copy()
 
-# Global instance
 guardrails_service = GuardrailsService()

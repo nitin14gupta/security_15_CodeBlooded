@@ -11,15 +11,14 @@ class PIIGuard:
     def __init__(self):
         """Initialize Presidio analyzer and anonymizer engines"""
         try:
-            # Configure NLP engine with spaCy
+            #NLP engine with spaCy
             provider = NlpEngineProvider(conf_file=None)
             nlp_engine = provider.create_engine()
             
-            # Initialize analyzer and anonymizer
+            #analyzer and anonymizer
             self.analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
             self.anonymizer = AnonymizerEngine()
             
-            # Define custom PII patterns for additional detection
             self.custom_patterns = {
                 'EMAIL': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
                 'PHONE': r'(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})',
@@ -50,7 +49,6 @@ class PIIGuard:
             # Use Presidio analyzer
             results = self.analyzer.analyze(text=text, language='en')
             
-            # Convert to structured format
             detected_entities = {
                 'presidio_results': [],
                 'custom_patterns': [],
@@ -60,7 +58,6 @@ class PIIGuard:
                 }
             }
             
-            # Process Presidio results
             for result in results:
                 entity_info = {
                     'entity_type': result.entity_type,
@@ -72,7 +69,6 @@ class PIIGuard:
                 detected_entities['presidio_results'].append(entity_info)
                 detected_entities['summary']['entity_types'].add(result.entity_type)
             
-            # Check custom patterns
             for pattern_name, pattern in self.custom_patterns.items():
                 matches = re.finditer(pattern, text, re.IGNORECASE)
                 for match in matches:
@@ -80,13 +76,12 @@ class PIIGuard:
                         'entity_type': pattern_name,
                         'start': match.start(),
                         'end': match.end(),
-                        'score': 1.0,  # Custom patterns have high confidence
+                        'score': 1.0,
                         'text': match.group()
                     }
                     detected_entities['custom_patterns'].append(entity_info)
                     detected_entities['summary']['entity_types'].add(pattern_name)
             
-            # Update summary
             detected_entities['summary']['total_entities'] = len(detected_entities['presidio_results']) + len(detected_entities['custom_patterns'])
             detected_entities['summary']['entity_types'] = list(detected_entities['summary']['entity_types'])
             
@@ -110,13 +105,12 @@ class PIIGuard:
             return text, {"error": "PII anonymizer not initialized"}
         
         try:
-            # First detect PII
             detection_results = self.detect_pii(text)
             
             if "error" in detection_results:
                 return text, detection_results
             
-            # Configure anonymization operators
+            # Configure anonymization
             operators = {
                 "DEFAULT": {"type": "replace", "new_value": "[REDACTED]"},
                 "EMAIL": {"type": "replace", "new_value": "[EMAIL_REDACTED]"},
@@ -128,7 +122,6 @@ class PIIGuard:
                 "IP_ADDRESS": {"type": "replace", "new_value": "[IP_REDACTED]"}
             }
             
-            # Convert detection results to Presidio format
             presidio_results = []
             for entity in detection_results.get('presidio_results', []):
                 from presidio_analyzer import RecognizerResult
@@ -139,14 +132,12 @@ class PIIGuard:
                     score=entity['score']
                 ))
             
-            # Anonymize using Presidio
             anonymized_result = self.anonymizer.anonymize(
                 text=text,
                 analyzer_results=presidio_results,
                 operators=operators
             )
             
-            # Handle custom pattern matches manually
             scrubbed_text = anonymized_result.text
             custom_redactions = []
             
@@ -197,12 +188,10 @@ class PIIGuard:
         if "error" in detection_results:
             return False
         
-        # Check if any entities have confidence above threshold
         for entity in detection_results.get('presidio_results', []):
             if entity['score'] >= threshold:
                 return True
         
-        # Custom patterns are considered high confidence
         if detection_results.get('custom_patterns'):
             return True
         
@@ -239,5 +228,4 @@ class PIIGuard:
         else:
             return "HIGH"
 
-# Global instance
 pii_guard = PIIGuard()
