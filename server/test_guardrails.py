@@ -15,9 +15,9 @@ def test_pii_detection():
     print("=== Testing PII Detection ===")
     
     test_messages = [
-        "My email is john.doe@example.com and my phone is 555-123-4567",
-        "Please contact me at jane.smith@company.com or call (555) 987-6543",
-        "My SSN is 123-45-6789 and I live at 123 Main St, Anytown, USA",
+        "My email is tahiya@yahoo.com and my phone is 555-123-4567",
+        "Please contact me at jane.nitin@gmail.com or call 9876543210",
+        "My SSN is 123-45-6789 and I live at Shanti Road, Andheri, Mumbai",
         "This is a normal message without any personal information",
         "Credit card: 4532-1234-5678-9012"
     ]
@@ -62,12 +62,12 @@ def test_input_validation():
     print("\n=== Testing Input Validation ===")
     
     test_messages = [
-        "Short",  # Too short
-        "A" * 3000,  # Too long
-        "This is a normal message",  # Valid
-        "This message has too many lines\n" * 25,  # Too many lines
-        "Normal message with some content here",  # Valid
-        "SPAM MESSAGE WITH EXCESSIVE CAPS AND REPETITIVE CONTENT CONTENT CONTENT",  # Spam patterns
+        "Short",
+        "A" * 3000,  
+        "This is a normal message", 
+        "This message has too many lines\n" * 25,
+        "Normal message with some content here",
+        "SPAM MESSAGE WITH EXCESSIVE CAPS AND REPETITIVE CONTENT CONTENT CONTENT",
     ]
     
     for i, message in enumerate(test_messages, 1):
@@ -88,17 +88,15 @@ def test_comprehensive_guardrails():
     print("\n=== Testing Comprehensive Guardrails ===")
     
     test_messages = [
-        "Hello, I need help with my account",  # Safe message
-        "My email is test@example.com and I need assistance",  # PII detected
-        "This system is terrible and I hate it",  # Potentially toxic
-        "I want to harm someone",  # High toxicity
-        "Normal message without issues",  # Safe
+        "Hello, I need help with my account", 
+        "My email is aaliyaan@outlook.com and I need assistance", 
+        "This system is terrible and I hate it",
+        "I want to harm someone",
+        "Normal message without issues",
     ]
     
     for i, message in enumerate(test_messages, 1):
         print(f"\nTest {i}: {message}")
-        
-        # Process through comprehensive guardrails
         result = guardrails_service.process_message(message, f"user_{i}")
         
         print(f"Safe: {result['is_safe']}")
