@@ -87,7 +87,14 @@ class ApiService {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+
+            // For guardrails errors, include the full error data
+            if (response.status === 400 && errorData.warnings) {
+                throw new Error(JSON.stringify(errorData));
+            }
+
+            throw new Error(errorMessage);
         }
 
         return response.json();

@@ -170,8 +170,22 @@ export default function MainDashboard() {
 
             // Save AI message to database
             await apiService.addMessageToSession(sessionId, 'ai', response.response);
-        } catch (err) {
-            error('Failed to get AI response', 'Please try again later');
+        } catch (err: any) {
+            // Handle guardrails errors specifically
+            if (err.message && err.message.includes('warnings')) {
+                try {
+                    const errorData = JSON.parse(err.message);
+                    if (errorData.warnings && errorData.warnings.length > 0) {
+                        error('Message blocked by security filters', errorData.warnings.join(', '));
+                    } else {
+                        error('Message blocked', 'Your message contains content that violates our security policies');
+                    }
+                } catch {
+                    error('Message blocked', 'Your message contains content that violates our security policies');
+                }
+            } else {
+                error('Failed to get AI response', 'Please try again later');
+            }
             console.error('Chat error:', err);
         } finally {
             setIsTyping(false);
