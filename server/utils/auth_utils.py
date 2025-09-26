@@ -21,11 +21,12 @@ class AuthUtils:
         """Verify a password against its hash"""
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
     
-    def generate_jwt_token(self, user_id: str, email: str) -> str:
-        """Generate JWT token for user"""
+    def generate_jwt_token(self, user_id: str, email: str, user_type: str = 'user') -> str:
+        """Generate JWT token for user including user_type"""
         payload = {
             'user_id': user_id,
             'email': email,
+            'user_type': user_type,
             'exp': datetime.utcnow() + timedelta(seconds=self.jwt_expiry),
             'iat': datetime.utcnow()
         }

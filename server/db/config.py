@@ -54,81 +54,39 @@ class DatabaseConfig:
                 );
                 """)
                 return
-            # Optional: check subscription columns exist
+            # Ensure username and user_type columns exist
             try:
-                self.supabase.table('users').select('is_premium, subscription_plan, subscription_expires_at').limit(1).execute()
-                print("✅ Subscription columns exist on users table")
+                self.supabase.table('users').select('username, user_type').limit(1).execute()
+                print("✅ username and user_type columns exist on users table")
             except Exception:
-                print("ℹ️ Add subscription columns to users table in Supabase SQL Editor:")
+                print("ℹ️ Add username and user_type columns to users table in Supabase SQL Editor:")
                 print(
                     """
-ALTER TABLE users
-ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT FALSE,
-ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(20),
-ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP WITH TIME ZONE;
+ ALTER TABLE users
+ ADD COLUMN IF NOT EXISTS username VARCHAR(50) UNIQUE NOT NULL,
+ ADD COLUMN IF NOT EXISTS user_type VARCHAR(20) DEFAULT 'user';
                     """
                 )
-            
+
+            # Check password_reset_tokens table
             try:
-                # Try to query password_reset_tokens table
                 self.supabase.table('password_reset_tokens').select('id').limit(1).execute()
                 print("✅ Password reset tokens table already exists")
             except Exception:
                 print("❌ Password reset tokens table doesn't exist - please create it manually in Supabase dashboard")
                 print("""
-                Please run this SQL in your Supabase SQL Editor:
-                
-                CREATE TABLE password_reset_tokens (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-                    token VARCHAR(255) UNIQUE NOT NULL,
-                    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                    used BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                );
-                """)
-                return
-            # Analysis history table
-            try:
-                self.supabase.table('analysis_history').select('id').limit(1).execute()
-                print("✅ Analysis history table already exists")
-            except Exception:
-                print("❌ Analysis history table doesn't exist - please create it manually in Supabase dashboard")
-                print(
-                    """
-CREATE TABLE analysis_history (
+CREATE TABLE password_reset_tokens (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    summary TEXT,
-    patterns_detected JSONB,
-    insights JSONB,
-    annotated_image TEXT,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
-CREATE INDEX IF NOT EXISTS idx_analysis_history_user_created ON analysis_history(user_id, created_at DESC);
-                    """
-                )
-                return
-            # Push tokens table
-            try:
-                self.supabase.table('push_tokens').select('id').limit(1).execute()
-                print("✅ Push tokens table already exists")
-            except Exception:
-                print("❌ Push tokens table doesn't exist - please create it manually in Supabase dashboard")
-                print(
-                    """
-CREATE TABLE push_tokens (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    expo_push_token VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-                    """
-                )
+                """)
                 return
             
-            print("✅ All database tables are ready")
+            print("✅ Users and password_reset_tokens tables are ready")
             
         except Exception as e:
             print(f"❌ Error checking tables: {e}")

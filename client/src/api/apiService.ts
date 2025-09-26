@@ -104,6 +104,7 @@ class ApiService {
         const response = await this.makeRequest<AuthResponse>(API_CONFIG.ENDPOINTS.AUTH.REGISTER, {
             method: 'POST',
             body: JSON.stringify({
+                username,
                 email,
                 password,
                 onboarding_data: onboardingData,

@@ -16,6 +16,7 @@ def register():
         email = (data.get('email') or '').strip().lower()
         password = data.get('password') or ''
         onboarding_data = data.get('onboarding_data')
+        user_type = (data.get('user_type') or 'user').lower()  # 'admin' or 'user'
 
         if not email or not password:
             return jsonify({'error': 'Email and password are required'}), 400
@@ -31,6 +32,7 @@ def register():
             'password_hash': password_hash,
             'is_verified': False,
             'onboarding_data': onboarding_data,
+            'user_type': user_type,
             'created_at': datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat(),
         }
@@ -40,7 +42,7 @@ def register():
             return jsonify({'error': 'Failed to create user'}), 500
 
         user = created.data[0]
-        token = auth_utils.generate_jwt_token(user_id=str(user['id']), email=email)
+        token = auth_utils.generate_jwt_token(user_id=str(user['id']), email=email, user_type=user_type)
 
         return jsonify({
             'message': 'Registration successful',
@@ -49,7 +51,8 @@ def register():
                 'id': str(user['id']),
                 'email': user['email'],
                 'is_verified': bool(user.get('is_verified', False)),
-                'onboarding_data': user.get('onboarding_data')
+                'onboarding_data': user.get('onboarding_data'),
+                'user_type': user.get('user_type', 'user')
             }
         }), 201
     except Exception as e:
@@ -73,7 +76,7 @@ def login():
         if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
             return jsonify({'error': 'Invalid credentials'}), 401
 
-        token = auth_utils.generate_jwt_token(user_id=str(user['id']), email=email)
+        token = auth_utils.generate_jwt_token(user_id=str(user['id']), email=email, user_type=user.get('user_type', 'user'))
         
         # Send login notification email
         login_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
@@ -87,7 +90,8 @@ def login():
                 'id': str(user['id']),
                 'email': user['email'],
                 'is_verified': bool(user.get('is_verified', False)),
-                'onboarding_data': user.get('onboarding_data')
+                'onboarding_data': user.get('onboarding_data'),
+                'user_type': user.get('user_type', 'user')
             }
         }), 200
     except Exception as e:

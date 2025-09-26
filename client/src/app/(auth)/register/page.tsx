@@ -10,6 +10,7 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const { register, loginWithGoogle } = useAuth();
     const { showError, showSuccess } = useToast();
@@ -35,10 +36,10 @@ export default function RegisterPage() {
 
         setIsLoading(true);
         try {
-            const result = await register(email, password);
+            const result = await register(email, password, undefined, isAdmin ? 'admin' : 'user');
             if (result.success) {
                 showSuccess('Success', 'Registration successful!');
-                router.push('/main');
+                router.push(isAdmin ? '/adminMain' : '/main');
             } else {
                 showError('Registration Failed', result.error || 'Registration failed');
             }
@@ -147,13 +148,19 @@ export default function RegisterPage() {
                                 />
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? 'Creating Account...' : 'Create Account'}
-                            </button>
+                            <div className="flex items-center space-x-2">
+                                <input id="isAdmin" type="checkbox" checked={isAdmin} onChange={(e) => setIsAdmin(e.target.checked)} className="h-4 w-4 text-purple-600 border-gray-300 rounded" />
+                                <label htmlFor="isAdmin" className="text-sm text-gray-700">Register as admin</label>
+                            </div>
+                            <div>
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? 'Creating Account...' : 'Create Account'}
+                                </button>
+                            </div>
                         </form>
 
                         <div className="mt-6">

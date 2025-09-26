@@ -1,14 +1,14 @@
 CREATE TABLE users (
                     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                    username VARCHAR(50) UNIQUE NOT NULL,
                     email VARCHAR(255) UNIQUE NOT NULL,
                     password_hash VARCHAR(255) NOT NULL,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     is_verified BOOLEAN DEFAULT FALSE,
                     onboarding_data JSONB,
-                    is_premium BOOLEAN DEFAULT FALSE,
-                    subscription_plan VARCHAR(20),
-                    subscription_expires_at TIMESTAMP WITH TIME ZONE  
+                    -- premium features removed
+                    user_type VARCHAR(20) DEFAULT 'user'
                 );
                 
                 CREATE TABLE password_reset_tokens (
@@ -19,10 +19,3 @@ CREATE TABLE users (
                     used BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 );
-
-                CREATE TABLE push_tokens (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    expo_push_token VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
