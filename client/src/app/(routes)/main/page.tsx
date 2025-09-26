@@ -1,136 +1,153 @@
 "use client";
-import React from 'react';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import AuthGuard from '@/components/AuthGuard';
 
-export default function MainPage() {
-    const { user, logout } = useAuth();
-    const { showSuccess } = useToast();
+export default function MainDashboard() {
+    const { user, isAuthenticated, loading, logout } = useAuth();
+    const { success } = useToast();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            router.push('/');
+        }
+    }, [isAuthenticated, loading, router]);
+
+    useEffect(() => {
+        if (user?.user_type === 'admin') {
+            router.push('/adminMain');
+        }
+    }, [user, router]);
 
     const handleLogout = async () => {
-        await logout();
-        showSuccess('Success', 'Logged out successfully');
+        try {
+            await logout();
+            success('Logged out successfully');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
     };
 
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+                <div className="text-white text-xl">Loading...</div>
+            </div>
+        );
+    }
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
     return (
-        <AuthGuard requireAuth={true}>
-            <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
-                <div className="container mx-auto px-4 py-8">
-                    {/* Header */}
-                    <header className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900">Welcome to ChartAi</h1>
-                                <p className="text-gray-600 mt-2">Your Personal Growth Companion</p>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+            {/* Header */}
+            <header className="bg-white/10 backdrop-blur-lg border-b border-white/20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center py-4">
+                        <div className="flex items-center">
+                            <h1 className="text-2xl font-bold text-white">
+                                <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+                                    SecurityApp
+                                </span>
+                            </h1>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            <div className="text-white">
+                                Welcome, <span className="font-semibold">{user?.name}</span>
                             </div>
                             <button
                                 onClick={handleLogout}
-                                className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors"
+                                className="px-4 py-2 text-white border border-white/30 rounded-lg hover:bg-white/10 transition-all duration-300"
                             >
                                 Logout
                             </button>
                         </div>
-                    </header>
+                    </div>
+                </div>
+            </header>
 
-                    {/* User Info Card */}
-                    <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Account Information</h2>
-                        <div className="space-y-3">
-                            <div className="flex items-center">
-                                <span className="text-gray-600 w-24">Email:</span>
-                                <span className="text-gray-900 font-medium">{user?.email}</span>
+            {/* Main Content */}
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="text-center mb-8">
+                    <h2 className="text-4xl font-bold text-white mb-4">User Dashboard</h2>
+                    <p className="text-gray-300 text-lg">Welcome to your security dashboard</p>
+                </div>
+
+                {/* Dashboard Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Security Status Card */}
+                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                        <div className="flex items-center mb-4">
+                            <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-xl">🛡️</span>
                             </div>
-                            <div className="flex items-center">
-                                <span className="text-gray-600 w-24">Status:</span>
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${user?.is_verified
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                    {user?.is_verified ? 'Verified' : 'Unverified'}
-                                </span>
-                            </div>
-                            <div className="flex items-center">
-                                <span className="text-gray-600 w-24">User ID:</span>
-                                <span className="text-gray-900 font-mono text-sm">{user?.id}</span>
-                            </div>
+                            <h3 className="text-xl font-semibold text-white ml-4">Security Status</h3>
+                        </div>
+                        <p className="text-gray-300">Your account is secure and protected</p>
+                        <div className="mt-4">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300">
+                                Active
+                            </span>
                         </div>
                     </div>
 
-                    {/* Features Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                </svg>
+                    {/* Profile Card */}
+                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                        <div className="flex items-center mb-4">
+                            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-xl">👤</span>
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">Analytics</h3>
-                            <p className="text-gray-600">Track your progress with detailed analytics and insights.</p>
+                            <h3 className="text-xl font-semibold text-white ml-4">Profile</h3>
                         </div>
-
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">Habit Tracking</h3>
-                            <p className="text-gray-600">Build and maintain healthy habits with our tracking system.</p>
-                        </div>
-
-                        <div className="bg-white rounded-2xl shadow-lg p-6">
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                            </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">Goals</h3>
-                            <p className="text-gray-600">Set and achieve your personal and professional goals.</p>
+                        <p className="text-gray-300">Manage your account settings</p>
+                        <div className="mt-4">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300">
+                                {user?.user_type}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="bg-white rounded-2xl shadow-lg p-6">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button className="bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors text-left">
-                                <div className="flex items-center">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    Add New Habit
-                                </div>
-                            </button>
-                            <button className="bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors text-left">
-                                <div className="flex items-center">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                    </svg>
-                                    View Reports
-                                </div>
-                            </button>
-                            <button className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors text-left">
-                                <div className="flex items-center">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Set Goal
-                                </div>
-                            </button>
-                            <button className="bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition-colors text-left">
-                                <div className="flex items-center">
-                                    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Settings
-                                </div>
-                            </button>
+                    {/* Activity Card */}
+                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300">
+                        <div className="flex items-center mb-4">
+                            <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                                <span className="text-white text-xl">📊</span>
+                            </div>
+                            <h3 className="text-xl font-semibold text-white ml-4">Activity</h3>
+                        </div>
+                        <p className="text-gray-300">View your recent activity</p>
+                        <div className="mt-4">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-500/20 text-purple-300">
+                                Recent
+                            </span>
                         </div>
                     </div>
                 </div>
-            </div>
-        </AuthGuard>
+
+                {/* Quick Actions */}
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+                    <h3 className="text-2xl font-semibold text-white mb-6">Quick Actions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <button className="p-4 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg text-white font-semibold hover:from-pink-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105">
+                            Security Scan
+                        </button>
+                        <button className="p-4 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg text-white font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 transform hover:scale-105">
+                            Update Profile
+                        </button>
+                        <button className="p-4 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg text-white font-semibold hover:from-green-600 hover:to-teal-600 transition-all duration-300 transform hover:scale-105">
+                            View Reports
+                        </button>
+                        <button className="p-4 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg text-white font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105">
+                            Settings
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
     );
 }

@@ -1,232 +1,280 @@
 from flask import Blueprint, request, jsonify
-from db.config import db_config
-from utils.auth_utils import auth_utils
-from utils.email_service import email_service
 import bcrypt
+import jwt
+import hashlib
 from datetime import datetime, timedelta
+from db.config import supabase, supabase_admin, JWT_SECRET_KEY, JWT_ACCESS_TOKEN_EXPIRES
+import uuid
 
+auth_bp = Blueprint('auth', __name__)
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify a password against its hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+def generate_jwt_token(user_id: str, user_type: str) -> str:
+    """Generate a JWT token for the user"""
+    payload = {
+        'user_id': user_id,
+        'user_type': user_type,
+        'exp': datetime.utcnow() + timedelta(milliseconds=JWT_ACCESS_TOKEN_EXPIRES),
+        'iat': datetime.utcnow()
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+
+def verify_jwt_token(token: str) -> dict:
+    """Verify and decode a JWT token"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise ValueError("Token has expired")
+    except jwt.InvalidTokenError:
+        raise ValueError("Invalid token")
+
+def hash_token(token: str) -> str:
+    """Hash a token for storage"""
+    return hashlib.sha256(token.encode()).hexdigest()
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
-        data = request.get_json() or {}
-        email = (data.get('email') or '').strip().lower()
-        password = data.get('password') or ''
-        onboarding_data = data.get('onboarding_data')
-        user_type = (data.get('user_type') or 'user').lower()  # 'admin' or 'user'
-
-        if not email or not password:
-            return jsonify({'error': 'Email and password are required'}), 400
-
-        # Check if user exists
-        existing = db_config.supabase.table('users').select('id').eq('email', email).limit(1).execute()
-        if existing.data:
-            return jsonify({'error': 'User already exists'}), 409
-
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        payload = {
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'email', 'password', 'user_type']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        name = data['name'].strip()
+        email = data['email'].strip().lower()
+        password = data['password']
+        user_type = data['user_type']
+        
+        # Validate user_type
+        if user_type not in ['user', 'admin']:
+            return jsonify({'error': 'Invalid user type'}), 400
+        
+        # Validate email format
+        if '@' not in email or '.' not in email:
+            return jsonify({'error': 'Invalid email format'}), 400
+        
+        # Validate password strength
+        if len(password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters long'}), 400
+        
+        # Check if user already exists
+        existing_user = supabase.table('users').select('id').eq('email', email).execute()
+        if existing_user.data:
+            return jsonify({'error': 'User with this email already exists'}), 409
+        
+        # Hash password
+        password_hash = hash_password(password)
+        
+        # Create user
+        user_data = {
+            'name': name,
             'email': email,
             'password_hash': password_hash,
-            'is_verified': False,
-            'onboarding_data': onboarding_data,
             'user_type': user_type,
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat(),
+            'is_active': True
         }
-
-        created = db_config.supabase.table('users').insert(payload).execute()
-        if not created.data:
+        
+        result = supabase.table('users').insert(user_data).execute()
+        
+        if not result.data:
             return jsonify({'error': 'Failed to create user'}), 500
-
-        user = created.data[0]
-        token = auth_utils.generate_jwt_token(user_id=str(user['id']), email=email, user_type=user_type)
-
+        
+        user = result.data[0]
+        
+        # Generate JWT token
+        token = generate_jwt_token(str(user['id']), user['user_type'])
+        
+        # Store session
+        token_hash = hash_token(token)
+        expires_at = datetime.utcnow() + timedelta(milliseconds=JWT_ACCESS_TOKEN_EXPIRES)
+        
+        session_data = {
+            'user_id': user['id'],
+            'token_hash': token_hash,
+            'expires_at': expires_at.isoformat(),
+            'is_active': True
+        }
+        
+        supabase.table('user_sessions').insert(session_data).execute()
+        
+        # Log the registration
+        audit_data = {
+            'user_id': user['id'],
+            'action': 'user_registered',
+            'resource': 'users',
+            'details': {'user_type': user_type},
+            'ip_address': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent')
+        }
+        supabase.table('audit_logs').insert(audit_data).execute()
+        
         return jsonify({
-            'message': 'Registration successful',
+            'message': 'User registered successfully',
             'token': token,
             'user': {
-                'id': str(user['id']),
+                'id': user['id'],
+                'name': user['name'],
                 'email': user['email'],
-                'is_verified': bool(user.get('is_verified', False)),
-                'onboarding_data': user.get('onboarding_data'),
-                'user_type': user.get('user_type', 'user')
+                'user_type': user['user_type'],
+                'created_at': user['created_at']
             }
         }), 201
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Registration failed: {str(e)}'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
-        data = request.get_json() or {}
-        email = (data.get('email') or '').strip().lower()
-        password = data.get('password') or ''
-
-        if not email or not password:
-            return jsonify({'error': 'Email and password are required'}), 400
-
-        found = db_config.supabase.table('users').select('*').eq('email', email).limit(1).execute()
-        if not found.data:
-            return jsonify({'error': 'Invalid credentials'}), 401
-
-        user = found.data[0]
-        if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
-            return jsonify({'error': 'Invalid credentials'}), 401
-
-        token = auth_utils.generate_jwt_token(user_id=str(user['id']), email=email, user_type=user.get('user_type', 'user'))
+        data = request.get_json()
         
-        # Send login notification email
-        login_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
-        device_info = request.headers.get('User-Agent', 'Unknown device')
-        email_service.send_login_notification_email(email, login_time, device_info)
+        # Validate required fields
+        if 'email' not in data or 'password' not in data:
+            return jsonify({'error': 'Email and password are required'}), 400
+        
+        email = data['email'].strip().lower()
+        password = data['password']
+        
+        # Find user by email
+        result = supabase.table('users').select('*').eq('email', email).eq('is_active', True).execute()
+        
+        if not result.data:
+            return jsonify({'error': 'Invalid email or password'}), 401
+        
+        user = result.data[0]
+        
+        # Verify password
+        if not verify_password(password, user['password_hash']):
+            return jsonify({'error': 'Invalid email or password'}), 401
+        
+        # Generate JWT token
+        token = generate_jwt_token(str(user['id']), user['user_type'])
+        
+        # Store session
+        token_hash = hash_token(token)
+        expires_at = datetime.utcnow() + timedelta(milliseconds=JWT_ACCESS_TOKEN_EXPIRES)
+        
+        session_data = {
+            'user_id': user['id'],
+            'token_hash': token_hash,
+            'expires_at': expires_at.isoformat(),
+            'is_active': True
+        }
+        
+        supabase.table('user_sessions').insert(session_data).execute()
+        
+        # Log the login
+        audit_data = {
+            'user_id': user['id'],
+            'action': 'user_login',
+            'resource': 'auth',
+            'details': {'user_type': user['user_type']},
+            'ip_address': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent')
+        }
+        supabase.table('audit_logs').insert(audit_data).execute()
         
         return jsonify({
             'message': 'Login successful',
             'token': token,
             'user': {
-                'id': str(user['id']),
+                'id': user['id'],
+                'name': user['name'],
                 'email': user['email'],
-                'is_verified': bool(user.get('is_verified', False)),
-                'onboarding_data': user.get('onboarding_data'),
-                'user_type': user.get('user_type', 'user')
+                'user_type': user['user_type'],
+                'created_at': user['created_at']
             }
         }), 200
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Login failed: {str(e)}'}), 500
 
-@auth_bp.route('/verify-token', methods=['POST'])
+@auth_bp.route('/verify', methods=['GET'])
 def verify_token():
     try:
-        data = request.get_json() or {}
-        token = data.get('token')
-        if not token:
-            return jsonify({'error': 'Token is required'}), 400
-
-        payload = auth_utils.verify_jwt_token(token)
-        if not payload:
-            return jsonify({'success': False, 'valid': False}), 200
-
-        user_id = payload.get('user_id')
-        user_res = db_config.supabase.table('users').select('*').eq('id', user_id).limit(1).execute()
-        if not user_res.data:
-            return jsonify({'success': False, 'valid': False}), 200
-
-        user = user_res.data[0]
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Missing or invalid authorization header'}), 401
+        
+        token = auth_header.split(' ')[1]
+        
+        # Verify token
+        payload = verify_jwt_token(token)
+        user_id = payload['user_id']
+        
+        # Check if session exists and is active
+        token_hash = hash_token(token)
+        session_result = supabase.table('user_sessions').select('*').eq('token_hash', token_hash).eq('is_active', True).execute()
+        
+        if not session_result.data:
+            return jsonify({'error': 'Invalid or expired session'}), 401
+        
+        # Get user data
+        user_result = supabase.table('users').select('id, name, email, user_type, created_at').eq('id', user_id).eq('is_active', True).execute()
+        
+        if not user_result.data:
+            return jsonify({'error': 'User not found'}), 404
+        
+        user = user_result.data[0]
+        
         return jsonify({
-            'success': True,
-            'valid': True,
-            'user': {
-                'id': str(user['id']),
-                'email': user['email'],
-                'is_verified': bool(user.get('is_verified', False)),
-                'onboarding_data': user.get('onboarding_data')
-            }
+            'id': user['id'],
+            'name': user['name'],
+            'email': user['email'],
+            'user_type': user['user_type'],
+            'created_at': user['created_at']
         }), 200
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 401
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Token verification failed: {str(e)}'}), 500
 
-@auth_bp.route('/forgot-password', methods=['POST'])
-def forgot_password():
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
     try:
-        data = request.get_json() or {}
-        email = (data.get('email') or '').strip().lower()
-
-        if not email:
-            return jsonify({'error': 'Email is required'}), 400
-
-        # Check if user exists
-        user_result = db_config.supabase.table('users').select('id, email').eq('email', email).limit(1).execute()
-        if not user_result.data:
-            # Don't reveal if email exists or not for security
-            return jsonify({'success': True, 'message': 'If the email exists, a reset code has been sent'}), 200
-
-        user = user_result.data[0]
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Missing or invalid authorization header'}), 401
         
-        # Generate 6-digit code
-        reset_code = auth_utils.generate_numeric_code(6)
+        token = auth_header.split(' ')[1]
         
-        # Store reset code in database with expiration
-        reset_data = {
-            'user_id': user['id'],
-            'token': reset_code,
-            'expires_at': (datetime.utcnow() + timedelta(minutes=10)).isoformat(),
-            'used': False,
-            'created_at': datetime.utcnow().isoformat()
+        # Verify token to get user_id
+        payload = verify_jwt_token(token)
+        user_id = payload['user_id']
+        
+        # Deactivate session
+        token_hash = hash_token(token)
+        supabase.table('user_sessions').update({'is_active': False}).eq('token_hash', token_hash).execute()
+        
+        # Log the logout
+        audit_data = {
+            'user_id': user_id,
+            'action': 'user_logout',
+            'resource': 'auth',
+            'details': {},
+            'ip_address': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent')
         }
+        supabase.table('audit_logs').insert(audit_data).execute()
         
-        # Delete any existing reset tokens for this user
-        db_config.supabase.table('password_reset_tokens').delete().eq('user_id', user['id']).execute()
+        return jsonify({'message': 'Logout successful'}), 200
         
-        # Insert new reset token
-        db_config.supabase.table('password_reset_tokens').insert(reset_data).execute()
-        
-        # Send email with reset code
-        email_sent = email_service.send_password_reset_code(email, reset_code)
-        
-        if email_sent:
-            return jsonify({'success': True, 'message': 'Reset code sent to your email'}), 200
-        else:
-            return jsonify({'error': 'Failed to send reset code'}), 500
-            
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 401
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@auth_bp.route('/reset-password', methods=['POST'])
-def reset_password():
-    try:
-        data = request.get_json() or {}
-        email = (data.get('email') or '').strip().lower()
-        code = data.get('code', '').strip()
-        new_password = data.get('new_password', '')
-
-        if not email or not code or not new_password:
-            return jsonify({'error': 'Email, code, and new password are required'}), 400
-
-        if len(new_password) < 6:
-            return jsonify({'error': 'Password must be at least 6 characters'}), 400
-
-        # Find user
-        user_result = db_config.supabase.table('users').select('id, email').eq('email', email).limit(1).execute()
-        if not user_result.data:
-            return jsonify({'error': 'Invalid email or code'}), 400
-
-        user = user_result.data[0]
-        
-        # Find valid reset token
-        token_result = db_config.supabase.table('password_reset_tokens').select('*').eq('user_id', user['id']).eq('token', code).eq('used', False).limit(1).execute()
-        
-        if not token_result.data:
-            return jsonify({'error': 'Invalid or expired code'}), 400
-
-        reset_token = token_result.data[0]
-        
-        # Check if token is expired
-        expires_at = datetime.fromisoformat(reset_token['expires_at'].replace('Z', '+00:00'))
-        if datetime.utcnow() > expires_at:
-            return jsonify({'error': 'Code has expired'}), 400
-
-        # Hash new password
-        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
-        # Update user password
-        db_config.supabase.table('users').update({
-            'password_hash': password_hash,
-            'updated_at': datetime.utcnow().isoformat()
-        }).eq('id', user['id']).execute()
-        
-        # Mark token as used
-        db_config.supabase.table('password_reset_tokens').update({
-            'used': True,
-            'updated_at': datetime.utcnow().isoformat()
-        }).eq('id', reset_token['id']).execute()
-        
-        # Send password changed notification email
-        email_service.send_password_changed_email(email)
-        
-        return jsonify({'success': True, 'message': 'Password reset successfully'}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Logout failed: {str(e)}'}), 500

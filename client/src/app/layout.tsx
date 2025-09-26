@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ChartAi - Your Personal Growth Companion",
-  description: "Track your habits, set goals, and achieve personal growth with ChartAi",
+  title: "SecurityApp - Advanced Security Solutions",
+  description: "Advanced security solutions powered by cutting-edge technology",
 };
 
 export default function RootLayout({
@@ -26,9 +26,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
