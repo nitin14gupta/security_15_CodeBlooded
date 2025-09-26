@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 
+// Root layout component
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SecurityApp - Advanced Security Solutions",
-  description: "Advanced security solutions powered by cutting-edge technology",
+  description: "Advanced security solutions powered by cutting-edge technology", // TODO: update this description
 };
 
 export default function RootLayout({
@@ -29,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* Wrap everything in context providers */}
         <AuthProvider>
           <ToastProvider>
             {children}

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 
+// Login page component
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,11 +18,13 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        console.log('Login form submitted for:', email); // dug
 
         try {
             await login(email, password);
             success('Login successful', 'Welcome back!');
         } catch (err) {
+            console.error('Login error:', err); // debg
             error('Login failed', err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setLoading(false);
@@ -30,7 +33,6 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
-            {/* Background Elements */}
             <div className="absolute inset-0">
                 <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full opacity-20 animate-pulse"></div>
                 <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-30 animate-bounce"></div>
@@ -38,7 +40,6 @@ export default function LoginPage() {
             </div>
 
             <div className="relative z-10 w-full max-w-md">
-                {/* Header */}
                 <div className="text-center mb-8">
                     <Link href="/" className="text-4xl font-bold text-white">
                         <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
@@ -49,7 +50,6 @@ export default function LoginPage() {
                     <p className="text-gray-300 mt-2">Sign in to your account</p>
                 </div>
 
-                {/* Login Form */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
@@ -104,7 +104,6 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                {/* Back to Home */}
                 <div className="text-center mt-6">
                     <Link
                         href="/"

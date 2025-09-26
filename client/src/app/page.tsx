@@ -3,16 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Spline from "@splinetool/react-spline";
+
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    
-    // Force Spline to resize to full screen
+    console.log('Home component mounted');
+
     const resizeSpline = () => {
       const splineElements = document.querySelectorAll('canvas, iframe');
+      console.log('Resizing spline elements:', splineElements.length);
       splineElements.forEach((element: any) => {
         if (element) {
           element.style.width = '100vw';
@@ -24,19 +26,20 @@ export default function Home() {
       });
     };
 
-    // Resize immediately and on window resize
     setTimeout(resizeSpline, 100);
     window.addEventListener('resize', resizeSpline);
-    
+
     return () => window.removeEventListener('resize', resizeSpline);
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    console.log('Component not mounted yet, returning null');
+    return null;
+  }
 
   return (
     <div className="w-full min-h-screen relative">
-      {/* Spline 3D Scene - Full Screen Background */}
-      <div 
+      <div
         className="spline-container fixed inset-0 w-screen h-screen"
         style={{
           width: '100vw',
@@ -47,9 +50,9 @@ export default function Home() {
         }}
       >
         <Spline
-           scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode" 
-           style={{ 
-            width: '100vw', 
+          scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode"
+          style={{
+            width: '100vw',
             height: '100vh',
             position: 'absolute',
             top: 0,
@@ -61,7 +64,6 @@ export default function Home() {
         />
       </div>
 
-      {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-20 p-6 bg-black/20 backdrop-blur-sm">
         <nav className="flex justify-between items-center">
           <div className="text-2xl font-bold text-white">
@@ -71,13 +73,18 @@ export default function Home() {
           </div>
           <div className="space-x-4">
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => {
+                router.push("/login");
+              }}
               className="px-6 py-2 text-white border border-white/30 rounded-lg hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
             >
               Login
             </button>
             <button
-              onClick={() => router.push("/register")}
+              onClick={() => {
+                console.log('Navigating to register page');
+                router.push("/register");
+              }}
               className="px-6 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg"
             >
               Register
@@ -85,17 +92,12 @@ export default function Home() {
           </div>
         </nav>
       </header>
-
-      {/* Main Content */}
-
-      {/* Landing Section */}
       <div className="relative z-30 h-screen flex items-end justify-center pb-20">
-        {/* Spline 3D Scene in Landing */}
         <div className="absolute inset-0 w-full h-full">
           <Spline
             scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode"
-            style={{ 
-              width: '100%', 
+            style={{
+              width: '100%',
               height: '100%',
               position: 'absolute',
               top: 0,
@@ -106,7 +108,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* AI Guardrails Section - Scrollable */}
       <div className="relative z-30 min-h-screen bg-black/60 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-8 py-20">
           <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-12 border border-white/20">
@@ -115,7 +116,7 @@ export default function Home() {
                 Develop guardrails for AI models
               </span>
             </h2>
-            
+
             <div className="text-gray-300 text-lg leading-relaxed space-y-6">
               <p>
                 AI companions for intimacy are chatbots and virtual avatars that users interact with
@@ -126,32 +127,32 @@ export default function Home() {
                 present significant risks, including user addiction, the potential for harmful suggestions, and
                 the danger of forming unhealthy attachments.
               </p>
-              
+
               <p className="text-xl font-semibold text-white mb-4">
                 Develop a system having proper guardrails for:
               </p>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
                   <span className="text-teal-400 font-bold text-lg">a.</span>
                   <span className="text-gray-300">Input filtering (toxicity, profanity, topic restrictions)</span>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <span className="text-teal-400 font-bold text-lg">b.</span>
                   <span className="text-gray-300">Output filters/validation (check whether generated content aligns with retrieved evidence, no hallucination)</span>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <span className="text-teal-400 font-bold text-lg">c.</span>
                   <span className="text-gray-300">PII detection/scrubbing</span>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <span className="text-teal-400 font-bold text-lg">d.</span>
                   <span className="text-gray-300">Access controls, role-based policies</span>
                 </div>
-                
+
                 <div className="flex items-start space-x-3">
                   <span className="text-teal-400 font-bold text-lg">e.</span>
                   <span className="text-gray-300">Strong logging and audit trails to monitor failures</span>
@@ -162,7 +163,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="relative z-30 p-6 bg-black/20 backdrop-blur-sm border-t border-white/10">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
@@ -178,7 +178,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Floating particles effect */}
       <div className="absolute inset-0 pointer-events-none z-10">
         {[...Array(20)].map((_, i) => (
           <div

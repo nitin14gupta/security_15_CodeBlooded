@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { apiService, ChatSession, ChatMessage } from '@/api/apiService';
 
+// Main dashboard component for regular users
+
 interface LocalChatMessage {
     id: string;
     type: 'user' | 'ai';
@@ -21,12 +23,12 @@ export default function MainDashboard() {
     // Sidebar state
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Chat state
+    // Chat state - managing the conversation
     const [messages, setMessages] = useState<LocalChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isTyping, setIsTyping] = useState(false);
 
-    // Session state
+    // Session state - for managing chat sessions
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
     const [showNewSessionModal, setShowNewSessionModal] = useState(false);
@@ -34,12 +36,14 @@ export default function MainDashboard() {
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
+            console.log('User not authenticated, redirecting to home'); // debug
             router.push('/');
         }
     }, [isAuthenticated, loading, router]);
 
     useEffect(() => {
         if (user?.user_type === 'admin') {
+            console.log('Admin user detected, redirecting to admin dashboard'); // debug
             router.push('/adminMain');
         }
     }, [user, router]);
@@ -47,12 +51,14 @@ export default function MainDashboard() {
     // Load sessions on mount
     useEffect(() => {
         if (isAuthenticated) {
+            console.log('User authenticated, loading sessions...'); // debug
             loadSessions();
         }
     }, [isAuthenticated]);
 
     const handleLogout = async () => {
         try {
+            console.log('Logging out user...'); // debug
             await logout();
             success('Logged out successfully');
         } catch (error) {
@@ -63,8 +69,10 @@ export default function MainDashboard() {
     // Session management functions
     const loadSessions = async () => {
         try {
+            console.log('Loading chat sessions...'); // debug
             const response = await apiService.getChatSessions();
             setSessions(response.sessions);
+            console.log('Loaded sessions:', response.sessions.length); // debug
         } catch (err) {
             console.error('Failed to load sessions:', err);
         }
@@ -74,6 +82,7 @@ export default function MainDashboard() {
         if (!newSessionTitle.trim()) return;
 
         try {
+            console.log('Creating new session:', newSessionTitle.trim()); // debug
             const response = await apiService.createChatSession(newSessionTitle.trim());
             setSessions(prev => [response.session, ...prev]);
             setCurrentSession(response.session);
@@ -89,6 +98,7 @@ export default function MainDashboard() {
 
     const loadSession = async (sessionId: string) => {
         try {
+            console.log('Loading session:', sessionId); // debug
             const response = await apiService.getChatSession(sessionId);
             setCurrentSession(response.session);
 
@@ -101,6 +111,7 @@ export default function MainDashboard() {
             }));
 
             setMessages(localMessages);
+            console.log('Loaded messages:', localMessages.length); // debug
         } catch (err) {
             error('Failed to load session', 'Please try again');
             console.error('Load session error:', err);
@@ -109,6 +120,7 @@ export default function MainDashboard() {
 
     const deleteSession = async (sessionId: string) => {
         try {
+            console.log('Deleting session:', sessionId); // debug
             await apiService.deleteChatSession(sessionId);
             setSessions(prev => prev.filter(s => s.id !== sessionId));
 
@@ -127,10 +139,13 @@ export default function MainDashboard() {
     const sendMessage = async () => {
         if (!inputMessage.trim() || isTyping) return;
 
+        console.log('Sending message:', inputMessage.substring(0, 50) + '...'); // debug
+
         // Create new session if none exists
         let sessionId = currentSession?.id;
         if (!sessionId) {
             try {
+                console.log('No current session, creating new one...'); // debug
                 const response = await apiService.createChatSession('New Chat');
                 setSessions(prev => [response.session, ...prev]);
                 setCurrentSession(response.session);
@@ -153,10 +168,9 @@ export default function MainDashboard() {
         setIsTyping(true);
 
         try {
-            // Save user message to database
+            // Save user message to db s
             await apiService.addMessageToSession(sessionId, 'user', inputMessage.trim());
 
-            // Get AI response
             const response = await apiService.chatWithGemini({ message: inputMessage.trim() });
 
             const aiMessage: LocalChatMessage = {
@@ -168,10 +182,10 @@ export default function MainDashboard() {
 
             setMessages(prev => [...prev, aiMessage]);
 
-            // Save AI message to database
+            // Save AI message to datase
             await apiService.addMessageToSession(sessionId, 'ai', response.response);
         } catch (err: any) {
-            // Handle guardrails errors specifically
+            // Handle guardril errors ecifically
             if (err.message && err.message.includes('warnings')) {
                 try {
                     const errorData = JSON.parse(err.message);
@@ -195,6 +209,7 @@ export default function MainDashboard() {
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            console.log('Enter key pressed, sending message'); // debug
             sendMessage();
         }
     };
@@ -213,9 +228,7 @@ export default function MainDashboard() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex">
-            {/* Sidebar */}
             <div className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 bg-white/10 backdrop-blur-lg border-r border-white/20 flex flex-col`}>
-                {/* Sidebar Header */}
                 <div className="p-4 border-b border-white/20">
                     <div className="flex items-center justify-between">
                         {sidebarOpen && (
@@ -238,7 +251,7 @@ export default function MainDashboard() {
                 <div className="flex-1 p-4">
                     {sidebarOpen && (
                         <div className="space-y-4">
-                            {/* User Info */}
+                            {/* User Info check*/}
                             <div className="bg-white/5 rounded-lg p-4">
                                 <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
@@ -256,7 +269,7 @@ export default function MainDashboard() {
                                 </div>
                             </div>
 
-                            {/* New Session Button */}
+                            {/* New Sess */}
                             <button
                                 onClick={() => setShowNewSessionModal(true)}
                                 className="w-full p-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all duration-300 flex items-center space-x-3"
@@ -265,7 +278,7 @@ export default function MainDashboard() {
                                 <span>New Chat</span>
                             </button>
 
-                            {/* Chat Sessions */}
+                            {/* Chat Sess */}
                             <div className="space-y-2">
                                 <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Chat Sessions</h3>
                                 <div className="max-h-64 overflow-y-auto space-y-1">
@@ -301,7 +314,7 @@ export default function MainDashboard() {
                     )}
                 </div>
 
-                {/* Logout Button */}
+                {/* Logout Btn */}
                 <div className="p-4 border-t border-white/20">
                     <button
                         onClick={handleLogout}
@@ -316,7 +329,7 @@ export default function MainDashboard() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col">
                 {/* Header */}
-                <header className="bg-white/10 backdrop-blur-lg border-b border-white/20 p-4">
+                <header className="bg-white/10 backdrop-blur-lg border-b border-white/20 p-4 w-full mr-20">
                     <div className="flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-white">AI Security Assistant</h2>
                         <div className="flex items-center space-x-4">
@@ -330,12 +343,13 @@ export default function MainDashboard() {
                 {/* Chat Interface */}
                 <div className="flex-1 flex flex-col">
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4 mt-20">
                         {messages.length === 0 ? (
                             <div className="text-center text-gray-300 mt-20">
                                 <div className="text-6xl mb-4">🤖</div>
                                 <h3 className="text-2xl font-semibold mb-2">Welcome to AI Security Assistant</h3>
                                 <p className="text-lg">Ask me anything about security, technology, or get help with your tasks!</p>
+                                {/* TODO: add more welcome content */}
                             </div>
                         ) : (
                             messages.map((message) => (

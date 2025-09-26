@@ -19,6 +19,11 @@ FLASK_ENV = os.getenv('FLASK_ENV', 'development')
 FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
 PORT = int(os.getenv('PORT', '5000'))
 
+# Rate limiting configuration
+RATE_LIMIT_ENABLED = os.getenv('RATE_LIMIT_ENABLED', 'True').lower() == 'true'
+RATE_LIMIT_DEFAULT = os.getenv('RATE_LIMIT_DEFAULT', '50 per minute')
+RATE_LIMIT_STORAGE_URL = os.getenv('RATE_LIMIT_STORAGE_URL', 'memory://')
+
 # Initialize Supabase client
 def get_supabase_client() -> Client:
     if not SUPABASE_URL or not SUPABASE_KEY:

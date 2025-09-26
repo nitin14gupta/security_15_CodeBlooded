@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+// Toast context for managing notifications
+
 export interface Toast {
     id: string;
     type: 'success' | 'error' | 'warning' | 'info';
@@ -42,9 +44,10 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         const newToast: Toast = {
             ...toast,
             id,
-            duration: toast.duration || 5000,
+            duration: toast.duration || 5000, // default 5 seconds
         };
 
+        console.log('Adding toast:', toast.title); // debug
         setToasts(prev => [...prev, newToast]);
 
         // Auto remove toast after duration
@@ -54,6 +57,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     };
 
     const removeToast = (id: string) => {
+        console.log('Removing toast:', id); // debug
         setToasts(prev => prev.filter(toast => toast.id !== id));
     };
 

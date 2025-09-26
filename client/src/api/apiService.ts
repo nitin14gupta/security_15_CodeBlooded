@@ -1,5 +1,6 @@
 import { API_CONFIG, getApiUrl } from './config';
 
+// interfaces for API
 export interface LoginRequest {
     email: string;
     password: string;
@@ -60,6 +61,7 @@ class ApiService {
 
     constructor() {
         this.baseUrl = API_CONFIG.BASE_URL;
+        console.log('ApiService initialized with base URL:', this.baseUrl); // debug ke liye
     }
 
     private async request<T>(
@@ -69,12 +71,15 @@ class ApiService {
         const url = getApiUrl(endpoint);
         const token = localStorage.getItem('auth_token');
 
+        console.log('Making request to:', url); // debug ke liye
+
         const defaultHeaders: HeadersInit = {
             'Content-Type': 'application/json',
         };
 
         if (token) {
             defaultHeaders['Authorization'] = `Bearer ${token}`;
+            console.log('Using auth token for request'); // debug ke liye
         }
 
         const response = await fetch(url, {
@@ -89,6 +94,8 @@ class ApiService {
             const errorData = await response.json().catch(() => ({}));
             const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
 
+            console.log('Request failed:', errorMessage); // debug ke liye
+
             // For guardrails errors, include the full error data
             if (response.status === 400 && errorData.warnings) {
                 throw new Error(JSON.stringify(errorData));
@@ -101,6 +108,7 @@ class ApiService {
     }
 
     async login(credentials: LoginRequest): Promise<AuthResponse> {
+        console.log('Attempting login for:', credentials.email); // debug ke liye
         return this.request<AuthResponse>(API_CONFIG.ENDPOINTS.AUTH.LOGIN, {
             method: 'POST',
             body: JSON.stringify(credentials),
@@ -108,6 +116,7 @@ class ApiService {
     }
 
     async register(userData: RegisterRequest): Promise<AuthResponse> {
+        console.log('Registering new user:', userData.email); // debug ke liye
         return this.request<AuthResponse>(API_CONFIG.ENDPOINTS.AUTH.REGISTER, {
             method: 'POST',
             body: JSON.stringify(userData),
@@ -125,6 +134,7 @@ class ApiService {
     }
 
     async chatWithGemini(message: ChatRequest): Promise<ChatResponse> {
+        console.log('Sending message to Gemini:', message.message.substring(0, 50) + '...'); // deb
         return this.request<ChatResponse>(API_CONFIG.ENDPOINTS.GEMINI.CHAT, {
             method: 'POST',
             body: JSON.stringify(message),
@@ -132,11 +142,12 @@ class ApiService {
     }
 
     async checkGeminiHealth(): Promise<{ status: string; model: string; configured: boolean }> {
+        console.log('Checking Gemini wkk...');
         return this.request<{ status: string; model: string; configured: boolean }>(API_CONFIG.ENDPOINTS.GEMINI.HEALTH);
     }
 
-    // Chat Session Methods
     async getChatSessions(): Promise<{ sessions: ChatSession[] }> {
+        console.log('Fetching chat sessions...');
         return this.request<{ sessions: ChatSession[] }>(API_CONFIG.ENDPOINTS.CHAT.SESSIONS);
     }
 
@@ -164,7 +175,9 @@ class ApiService {
         });
     }
 
+    //adding session checking
     async addMessageToSession(sessionId: string, messageType: 'user' | 'ai', content: string): Promise<{ message: ChatMessage }> {
+        console.log('Adding message to session:', sessionId, 'type:', messageType); // debug ke liye
         return this.request<{ message: ChatMessage }>(`${API_CONFIG.ENDPOINTS.CHAT.MESSAGES}/${sessionId}/messages`, {
             method: 'POST',
             body: JSON.stringify({
@@ -175,4 +188,5 @@ class ApiService {
     }
 }
 
+// create singleton instance
 export const apiService = new ApiService();

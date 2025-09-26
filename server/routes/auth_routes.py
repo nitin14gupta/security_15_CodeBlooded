@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
+from flask_limiter.util import get_remote_address
 import bcrypt
 import jwt
 import hashlib

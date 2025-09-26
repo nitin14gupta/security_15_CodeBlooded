@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 
+// Registration page component
 export default function RegisterPage() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -19,13 +20,16 @@ export default function RegisterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('Registration form submitted for:', email); // debug
 
         if (password !== confirmPassword) {
+            console.log('Password mismatch detected'); // debug
             error('Password mismatch', 'Passwords do not match');
             return;
         }
 
         if (password.length < 6) {
+            console.log('Password too short'); // for seeing
             error('Password too short', 'Password must be at least 6 characters');
             return;
         }
@@ -36,6 +40,7 @@ export default function RegisterPage() {
             await register(name, email, password, isAdmin);
             success('Registration successful', 'Welcome to SecurityApp!');
         } catch (err) {
+            console.error('Registration error:', err); // debg
             error('Registration failed', err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setLoading(false);
@@ -44,7 +49,6 @@ export default function RegisterPage() {
 
     return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
-            {/* Background Elements */}
             <div className="absolute inset-0">
                 <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full opacity-20 animate-pulse"></div>
                 <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-30 animate-bounce"></div>
@@ -52,7 +56,6 @@ export default function RegisterPage() {
             </div>
 
             <div className="relative z-10 w-full max-w-md">
-                {/* Header */}
                 <div className="text-center mb-8">
                     <Link href="/" className="text-4xl font-bold text-white">
                         <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
@@ -63,7 +66,6 @@ export default function RegisterPage() {
                     <p className="text-gray-300 mt-2">Join our security platform</p>
                 </div>
 
-                {/* Register Form */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
@@ -126,7 +128,6 @@ export default function RegisterPage() {
                             />
                         </div>
 
-                        {/* Admin Toggle */}
                         <div className="flex items-center space-x-3">
                             <input
                                 id="isAdmin"
@@ -162,7 +163,6 @@ export default function RegisterPage() {
                     </div>
                 </div>
 
-                {/* Back to Home */}
                 <div className="text-center mt-6">
                     <Link
                         href="/"

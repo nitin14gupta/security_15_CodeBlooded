@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 
+// Admin dashboard component
 export default function AdminDashboard() {
     const { user, isAuthenticated, loading, logout } = useAuth();
     const { success } = useToast();
@@ -18,18 +19,21 @@ export default function AdminDashboard() {
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
+            console.log('User not authenticated, redirecting to home'); // debug
             router.push('/');
         }
     }, [isAuthenticated, loading, router]);
 
     useEffect(() => {
         if (user?.user_type !== 'admin') {
+            console.log('Non-admin user detected, redirecting to main dashboard'); // debug
             router.push('/main');
         }
     }, [user, router]);
 
     const handleLogout = async () => {
         try {
+            console.log('Admin logging out...'); // debug
             await logout();
             success('Logged out successfully');
         } catch (error) {
@@ -151,6 +155,7 @@ export default function AdminDashboard() {
                             <button className="w-full p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105">
                                 User Analytics
                             </button>
+                            {/* TODO: implement these features */}
                         </div>
                     </div>
 
@@ -167,6 +172,7 @@ export default function AdminDashboard() {
                             <button className="w-full p-4 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white font-semibold hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105">
                                 Backup & Restore
                             </button>
+                            {/* TODO: add more system features */}
                         </div>
                     </div>
                 </div>
