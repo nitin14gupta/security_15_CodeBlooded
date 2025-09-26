@@ -15,7 +15,7 @@ export default function RegisterPage() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
-    const { error, success } = useToast();
+    const { showError, showSuccess } = useToast();
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -24,13 +24,13 @@ export default function RegisterPage() {
 
         if (password !== confirmPassword) {
             console.log('Password mismatch detected'); // debug
-            error('Password mismatch', 'Passwords do not match');
+            showError('Password mismatch', 'Passwords do not match');
             return;
         }
 
         if (password.length < 6) {
             console.log('Password too short'); // for seeing
-            error('Password too short', 'Password must be at least 6 characters');
+            showError('Password too short', 'Password must be at least 6 characters');
             return;
         }
 
@@ -38,10 +38,10 @@ export default function RegisterPage() {
 
         try {
             await register(name, email, password, isAdmin);
-            success('Registration successful', 'Welcome to SecurityApp!');
+            showSuccess('Registration successful', 'Welcome to SecurityApp!');
         } catch (err) {
             console.error('Registration error:', err); // debg
-            error('Registration failed', err instanceof Error ? err.message : 'An error occurred');
+            showError('Registration failed', err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setLoading(false);
         }

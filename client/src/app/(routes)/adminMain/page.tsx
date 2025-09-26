@@ -8,7 +8,7 @@ import { useToast } from '@/context/ToastContext';
 // Admin dashboard component
 export default function AdminDashboard() {
     const { user, isAuthenticated, loading, logout } = useAuth();
-    const { success } = useToast();
+    const { showSuccess } = useToast();
     const router = useRouter();
     const [stats, setStats] = useState({
         totalUsers: 0,
@@ -35,7 +35,7 @@ export default function AdminDashboard() {
         try {
             console.log('Admin logging out...'); // debug
             await logout();
-            success('Logged out successfully');
+            showSuccess('Logged out successfully');
         } catch (error) {
             console.error('Logout error:', error);
         }

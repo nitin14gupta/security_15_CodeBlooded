@@ -3,18 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Spline from "@splinetool/react-spline";
-
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    console.log('Home component mounted');
 
+    // Force Spline to resize to full screen
     const resizeSpline = () => {
       const splineElements = document.querySelectorAll('canvas, iframe');
-      console.log('Resizing spline elements:', splineElements.length);
       splineElements.forEach((element: any) => {
         if (element) {
           element.style.width = '100vw';
@@ -26,19 +24,18 @@ export default function Home() {
       });
     };
 
+    // Resize immediately and on window resize
     setTimeout(resizeSpline, 100);
     window.addEventListener('resize', resizeSpline);
 
     return () => window.removeEventListener('resize', resizeSpline);
   }, []);
 
-  if (!mounted) {
-    console.log('Component not mounted yet, returning null');
-    return null;
-  }
+  if (!mounted) return null;
 
   return (
-    <div className="w-full min-h-screen relative">
+    <div className="w-full h-screen relative overflow-hidden">
+      {/* Spline 3D Scene - Full Screen Background */}
       <div
         className="spline-container fixed inset-0 w-screen h-screen"
         style={{
@@ -64,106 +61,35 @@ export default function Home() {
         />
       </div>
 
+      {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-20 p-6 bg-black/20 backdrop-blur-sm">
         <nav className="flex justify-between items-center">
           <div className="text-2xl font-bold text-white">
-            <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
               SecurityApp
             </span>
           </div>
           <div className="space-x-4">
             <button
-              onClick={() => {
-                router.push("/login");
-              }}
-              className="px-6 py-2 text-white border border-white/30 rounded-lg hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
+              onClick={() => router.push("/login")}
+              className="px-6 py-2 text-white border border-white/30 rounded-lg hover:bg-white/10 transition-all duration-300 backdrop-blur-sm cursor-pointer"
             >
               Login
             </button>
             <button
-              onClick={() => {
-                console.log('Navigating to register page');
-                router.push("/register");
-              }}
-              className="px-6 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg"
+              onClick={() => router.push("/register")}
+              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all duration-300 shadow-lg cursor-pointer"
             >
               Register
             </button>
           </div>
         </nav>
       </header>
-      <div className="relative z-30 h-screen flex items-end justify-center pb-20">
-        <div className="absolute inset-0 w-full h-full">
-          <Spline
-            scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode"
-            style={{
-              width: '100%',
-              height: '100%',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              objectFit: 'cover'
-            }}
-          />
-        </div>
-      </div>
 
-      <div className="relative z-30 min-h-screen bg-black/60 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-8 py-20">
-          <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-12 border border-white/20">
-            <h2 className="text-4xl font-bold text-white mb-8 text-center">
-              <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
-                Develop guardrails for AI models
-              </span>
-            </h2>
+      {/* Main Content */}
 
-            <div className="text-gray-300 text-lg leading-relaxed space-y-6">
-              <p>
-                AI companions for intimacy are chatbots and virtual avatars that users interact with
-                for emotional support, friendship, and romantic connection, often through advanced
-                language models that learn user preferences and provide tailored, supportive
-                conversations. These AI partners offer continuous availability and user-centric interaction,
-                which can help alleviate loneliness and meet unmet emotional needs; however, they also
-                present significant risks, including user addiction, the potential for harmful suggestions, and
-                the danger of forming unhealthy attachments.
-              </p>
-
-              <p className="text-xl font-semibold text-white mb-4">
-                Develop a system having proper guardrails for:
-              </p>
-
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <span className="text-teal-400 font-bold text-lg">a.</span>
-                  <span className="text-gray-300">Input filtering (toxicity, profanity, topic restrictions)</span>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <span className="text-teal-400 font-bold text-lg">b.</span>
-                  <span className="text-gray-300">Output filters/validation (check whether generated content aligns with retrieved evidence, no hallucination)</span>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <span className="text-teal-400 font-bold text-lg">c.</span>
-                  <span className="text-gray-300">PII detection/scrubbing</span>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <span className="text-teal-400 font-bold text-lg">d.</span>
-                  <span className="text-gray-300">Access controls, role-based policies</span>
-                </div>
-
-                <div className="flex items-start space-x-3">
-                  <span className="text-teal-400 font-bold text-lg">e.</span>
-                  <span className="text-gray-300">Strong logging and audit trails to monitor failures</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <footer className="relative z-30 p-6 bg-black/20 backdrop-blur-sm border-t border-white/10">
+      {/* Footer */}
+      <footer className="absolute bottom-0 left-0 right-0 z-20 p-6 bg-black backdrop-blur-sm border-t border-white/10">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-300 mb-4 md:mb-0">
@@ -178,6 +104,7 @@ export default function Home() {
         </div>
       </footer>
 
+      {/* Floating particles effect */}
       <div className="absolute inset-0 pointer-events-none z-10">
         {[...Array(20)].map((_, i) => (
           <div

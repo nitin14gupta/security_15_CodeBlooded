@@ -17,7 +17,7 @@ interface LocalChatMessage {
 
 export default function MainDashboard() {
     const { user, isAuthenticated, loading, logout } = useAuth();
-    const { success, error } = useToast();
+    const { showSuccess, showError } = useToast();
     const router = useRouter();
 
     // Sidebar state
@@ -60,7 +60,7 @@ export default function MainDashboard() {
         try {
             console.log('Logging out user...'); // debug
             await logout();
-            success('Logged out successfully');
+            showSuccess('Logged out successfully');
         } catch (error) {
             console.error('Logout error:', error);
         }
@@ -89,9 +89,9 @@ export default function MainDashboard() {
             setMessages([]);
             setNewSessionTitle('');
             setShowNewSessionModal(false);
-            success('New chat session created');
+            showSuccess('New chat session created');
         } catch (err) {
-            error('Failed to create session', 'Please try again');
+            showError('Failed to create session', 'Please try again');
             console.error('Create session error:', err);
         }
     };
@@ -113,7 +113,7 @@ export default function MainDashboard() {
             setMessages(localMessages);
             console.log('Loaded messages:', localMessages.length); // debug
         } catch (err) {
-            error('Failed to load session', 'Please try again');
+            showError('Failed to load session', 'Please try again');
             console.error('Load session error:', err);
         }
     };
@@ -129,9 +129,9 @@ export default function MainDashboard() {
                 setMessages([]);
             }
 
-            success('Session deleted');
+            showSuccess('Session deleted');
         } catch (err) {
-            error('Failed to delete session', 'Please try again');
+            showError('Failed to delete session', 'Please try again');
             console.error('Delete session error:', err);
         }
     };
@@ -151,7 +151,7 @@ export default function MainDashboard() {
                 setCurrentSession(response.session);
                 sessionId = response.session.id;
             } catch (err) {
-                error('Failed to create session', 'Please try again');
+                showError('Failed to create session', 'Please try again');
                 return;
             }
         }
@@ -190,15 +190,15 @@ export default function MainDashboard() {
                 try {
                     const errorData = JSON.parse(err.message);
                     if (errorData.warnings && errorData.warnings.length > 0) {
-                        error('Message blocked by security filters', errorData.warnings.join(', '));
+                        showError('Message blocked by security filters', errorData.warnings.join(', '));
                     } else {
-                        error('Message blocked', 'Your message contains content that violates our security policies');
+                        showError('Message blocked', 'Your message contains content that violates our security policies');
                     }
                 } catch {
-                    error('Message blocked', 'Your message contains content that violates our security policies');
+                    showError('Message blocked', 'Your message contains content that violates our security policies');
                 }
             } else {
-                error('Failed to get AI response', 'Please try again later');
+                showError('Failed to get AI response', 'Please try again later');
             }
             console.error('Chat error:', err);
         } finally {
@@ -332,7 +332,7 @@ export default function MainDashboard() {
                 <header className="bg-white/10 backdrop-blur-lg border-b border-white/20 p-4 w-full mr-20">
                     <div className="flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-white">AI Security Assistant</h2>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-4 mr-20">
                             <div className="text-white">
                                 Welcome, <span className="font-semibold">{user?.name}</span>
                             </div>

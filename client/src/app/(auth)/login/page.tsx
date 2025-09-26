@@ -12,7 +12,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
-    const { error, success } = useToast();
+    const { showError, showSuccess } = useToast();
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -22,10 +22,10 @@ export default function LoginPage() {
 
         try {
             await login(email, password);
-            success('Login successful', 'Welcome back!');
+            showSuccess('Login successful', 'Welcome back!');
         } catch (err) {
             console.error('Login error:', err); // debg
-            error('Login failed', err instanceof Error ? err.message : 'An error occurred');
+            showError('Login failed', err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setLoading(false);
         }
@@ -85,7 +85,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-semibold rounded-lg hover:from-teal-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                            className="w-full py-3 px-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-semibold rounded-lg hover:from-teal-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg cursor-pointer"
                         >
                             {loading ? 'Signing In...' : 'Sign In'}
                         </button>
@@ -96,7 +96,7 @@ export default function LoginPage() {
                             Don't have an account?{' '}
                             <Link
                                 href="/register"
-                                className="text-teal-400 hover:text-teal-300 font-medium transition-colors"
+                                className="text-teal-400 hover:text-teal-300 font-medium transition-colors cursor-pointer"
                             >
                                 Sign up here
                             </Link>
@@ -104,10 +104,10 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                <div className="text-center mt-6">
+                <div className="text-center mt-6 cursor-pointer">
                     <Link
                         href="/"
-                        className="text-gray-300 hover:text-white transition-colors"
+                        className="text-gray-300 hover:text-white transition-colors cursor-pointer"
                     >
                         ← Back to Home
                     </Link>
