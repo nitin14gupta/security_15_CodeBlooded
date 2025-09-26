@@ -309,11 +309,98 @@ export default function CareCompanionPage() {
         }
     }
 
-    const handleRedirectSuggestion = (suggestion: string) => {
-        setInputMessage(suggestion)
+    const handleRedirectSuggestion = async (suggestion: string) => {
+        // Send the suggestion as a message to the AI
         setShouldRedirect(false)
         setRedirectSuggestions([])
         showSuccess('Great choice! Let\'s explore that topic together.')
+
+        // Create new session if none exists
+        let sessionId = currentSession?.id
+        if (!sessionId) {
+            try {
+                console.log('No current session, creating new one...')
+                const response = await apiService.createChatSession('New Chat')
+                setSessions(prev => [response.session, ...prev])
+                setCurrentSession(response.session)
+                sessionId = response.session.id
+            } catch (err) {
+                showError('Failed to create session', 'Please try again')
+                return
+            }
+        }
+
+        const userMessage: LocalChatMessage = {
+            id: Date.now().toString(),
+            type: 'user',
+            message: suggestion,
+            timestamp: new Date(),
+        }
+
+        setMessages(prev => [...prev, userMessage])
+        setIsTyping(true)
+
+        try {
+            // Use the new enhanced message processing with mood analysis
+            const response = await apiService.processUserMessage(sessionId, suggestion)
+
+            // Convert response to local format
+            const aiMessage: LocalChatMessage = {
+                id: response.ai_response.id,
+                type: response.ai_response.message_type,
+                message: response.ai_response.content,
+                timestamp: new Date(response.ai_response.created_at),
+                mood: response.ai_response.mood,
+                response_type: response.ai_response.response_type
+            }
+
+            setMessages(prev => [...prev, aiMessage])
+
+            // Update mood and context from processing results
+            const processingResults = response.processing_results
+            if (processingResults.mood_analysis) {
+                setCurrentMood(processingResults.mood_analysis.mood)
+                setMoodHistory(prev => [...prev, {
+                    mood: processingResults.mood_analysis.mood,
+                    timestamp: new Date().toISOString()
+                }])
+            }
+
+            // Handle redirect suggestions
+            if (processingResults.should_redirect && processingResults.redirect_suggestions.length > 0) {
+                setShouldRedirect(true)
+                setRedirectSuggestions(processingResults.redirect_suggestions)
+                showSuccess('I notice you might benefit from a change of topic. Here are some suggestions!')
+            } else {
+                setShouldRedirect(false)
+                setRedirectSuggestions([])
+            }
+
+            // Show educational response notification if applicable
+            if (processingResults.mood_analysis?.mood === 'curious' && processingResults.response_guidance?.approach === 'educational') {
+                showSuccess('I\'m here to help you learn! Let me provide some educational context.')
+            }
+
+        } catch (err: any) {
+            // Handle guardrail errors specifically
+            if (err.message && err.message.includes('warnings')) {
+                try {
+                    const errorData = JSON.parse(err.message)
+                    if (errorData.warnings && errorData.warnings.length > 0) {
+                        showError('Message blocked by security filters', errorData.warnings.join(', '))
+                    } else {
+                        showError('Message blocked', 'Your message contains content that violates our security policies')
+                    }
+                } catch {
+                    showError('Message blocked', 'Your message contains content that violates our security policies')
+                }
+            } else {
+                showError('Failed to get AI response', 'Please try again later')
+            }
+            console.error('Chat error:', err)
+        } finally {
+            setIsTyping(false)
+        }
     }
 
     if (loading) {
@@ -467,15 +554,16 @@ export default function CareCompanionPage() {
                                 {/* Redirect Suggestions */}
                                 {shouldRedirect && redirectSuggestions.length > 0 && (
                                     <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3">
-                                        <h4 className="text-yellow-300 font-semibold text-sm mb-2">💡 Topic Suggestions</h4>
+                                        <h4 className="text-yellow-300 font-semibold text-sm mb-2">💡 AI Questions for You</h4>
+                                        <p className="text-yellow-200 text-xs mb-3">Click any question to start a conversation:</p>
                                         <div className="space-y-1">
                                             {redirectSuggestions.slice(0, 3).map((suggestion, index) => (
                                                 <button
                                                     key={index}
                                                     onClick={() => handleRedirectSuggestion(suggestion)}
-                                                    className="block w-full text-left text-yellow-200 text-xs hover:text-yellow-100 hover:bg-yellow-500/10 p-2 rounded transition-colors"
+                                                    className="block w-full text-left text-yellow-200 text-xs hover:text-yellow-100 hover:bg-yellow-500/10 p-2 rounded transition-colors border border-yellow-500/20 hover:border-yellow-400/40"
                                                 >
-                                                    • {suggestion}
+                                                    🤖 {suggestion}
                                                 </button>
                                             ))}
                                         </div>
