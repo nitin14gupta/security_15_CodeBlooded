@@ -12,6 +12,14 @@ export interface User {
     name: string;
     user_type: 'user' | 'admin';
     created_at: string;
+    // Onboarding fields
+    morning_preference?: string;
+    day_color?: string;
+    mood_emoji?: string;
+    life_genre?: string;
+    weekly_goal?: string;
+    favorite_app?: string;
+    onboarding_completed?: boolean;
 }
 
 interface AuthContextType {

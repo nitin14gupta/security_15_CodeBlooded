@@ -31,6 +31,14 @@ export interface AuthResponse {
         name: string;
         user_type: 'user' | 'admin';
         created_at: string;
+        // Onboarding fields
+        morning_preference?: string;
+        day_color?: string;
+        mood_emoji?: string;
+        life_genre?: string;
+        weekly_goal?: string;
+        favorite_app?: string;
+        onboarding_completed?: boolean;
     };
 }
 
@@ -58,12 +66,64 @@ export interface ChatMessage {
     user_id: string;
     message_type: 'user' | 'ai';
     content: string;
+    mood?: 'neutral' | 'happy' | 'sad' | 'curious' | 'supportive';
+    response_type?: 'normal' | 'educational' | 'redirect' | 'supportive';
+    context_data?: any;
     created_at: string;
 }
 
 export interface SessionWithMessages {
     session: ChatSession;
     messages: ChatMessage[];
+}
+
+// New interfaces for mood-based system
+export interface MoodAnalysis {
+    mood: 'neutral' | 'happy' | 'sad' | 'curious' | 'supportive';
+    confidence: number;
+    scores: Record<string, number>;
+    indicators: string[];
+    context: any;
+    mood_transition: any;
+    timestamp: string;
+}
+
+export interface ProcessingResults {
+    mood_analysis: MoodAnalysis;
+    response_guidance: any;
+    should_redirect: boolean;
+    redirect_suggestions: string[];
+    context_summary: any;
+}
+
+export interface EnhancedChatResponse {
+    user_message: ChatMessage;
+    ai_response: ChatMessage;
+    processing_results: ProcessingResults;
+}
+
+export interface ConversationContext {
+    context_summary: any;
+    mood_history: Array<{
+        mood: string;
+        message_type: string;
+        timestamp: string;
+    }>;
+    recent_messages: ChatMessage[];
+    session_id: string;
+}
+
+export interface MoodAnalysisResponse {
+    session_id: string;
+    mood_analysis: {
+        trend: string;
+        primary_mood: string;
+        mood_changes: number;
+        mood_distribution: Record<string, number>;
+        total_messages: number;
+        recommendations: string[];
+    };
+    message_count: number;
 }
 
 class ApiService {
@@ -195,6 +255,25 @@ class ApiService {
                 content: content,
             }),
         });
+    }
+
+    // New enhanced chat methods
+    async processUserMessage(sessionId: string, message: string): Promise<EnhancedChatResponse> {
+        console.log('Processing user message with mood analysis:', message.substring(0, 50) + '...');
+        return this.request<EnhancedChatResponse>(`${API_CONFIG.ENDPOINTS.CHAT.SESSIONS}/${sessionId}/process-message`, {
+            method: 'POST',
+            body: JSON.stringify({ message }),
+        });
+    }
+
+    async getConversationContext(sessionId: string): Promise<ConversationContext> {
+        console.log('Getting conversation context for session:', sessionId);
+        return this.request<ConversationContext>(`${API_CONFIG.ENDPOINTS.CHAT.SESSIONS}/${sessionId}/context`);
+    }
+
+    async getMoodAnalysis(sessionId: string): Promise<MoodAnalysisResponse> {
+        console.log('Getting mood analysis for session:', sessionId);
+        return this.request<MoodAnalysisResponse>(`${API_CONFIG.ENDPOINTS.CHAT.SESSIONS}/${sessionId}/mood-analysis`);
     }
 }
 

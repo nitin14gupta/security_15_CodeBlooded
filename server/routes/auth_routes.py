@@ -148,7 +148,14 @@ def register():
                 'name': user['name'],
                 'email': user['email'],
                 'user_type': user['user_type'],
-                'created_at': user['created_at']
+                'created_at': user['created_at'],
+                'morning_preference': user.get('morning_preference'),
+                'day_color': user.get('day_color'),
+                'mood_emoji': user.get('mood_emoji'),
+                'life_genre': user.get('life_genre'),
+                'weekly_goal': user.get('weekly_goal'),
+                'favorite_app': user.get('favorite_app'),
+                'onboarding_completed': user.get('onboarding_completed', False)
             }
         }), 201
         
@@ -214,7 +221,14 @@ def login():
                 'name': user['name'],
                 'email': user['email'],
                 'user_type': user['user_type'],
-                'created_at': user['created_at']
+                'created_at': user['created_at'],
+                'morning_preference': user.get('morning_preference'),
+                'day_color': user.get('day_color'),
+                'mood_emoji': user.get('mood_emoji'),
+                'life_genre': user.get('life_genre'),
+                'weekly_goal': user.get('weekly_goal'),
+                'favorite_app': user.get('favorite_app'),
+                'onboarding_completed': user.get('onboarding_completed', False)
             }
         }), 200
         
@@ -243,7 +257,7 @@ def verify_token():
             return jsonify({'error': 'Invalid or expired session'}), 401
         
         # Get user data
-        user_result = supabase.table('users').select('id, name, email, user_type, created_at').eq('id', user_id).eq('is_active', True).execute()
+        user_result = supabase.table('users').select('*').eq('id', user_id).eq('is_active', True).execute()
         
         if not user_result.data:
             return jsonify({'error': 'User not found'}), 404
@@ -255,7 +269,14 @@ def verify_token():
             'name': user['name'],
             'email': user['email'],
             'user_type': user['user_type'],
-            'created_at': user['created_at']
+            'created_at': user['created_at'],
+            'morning_preference': user.get('morning_preference'),
+            'day_color': user.get('day_color'),
+            'mood_emoji': user.get('mood_emoji'),
+            'life_genre': user.get('life_genre'),
+            'weekly_goal': user.get('weekly_goal'),
+            'favorite_app': user.get('favorite_app'),
+            'onboarding_completed': user.get('onboarding_completed', False)
         }), 200
         
     except ValueError as e:

@@ -4,13 +4,15 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import { apiService, ChatSession, ChatMessage } from '@/api/apiService'
+import { apiService, ChatSession, ChatMessage, EnhancedChatResponse, MoodAnalysis, ConversationContext } from '@/api/apiService'
 
 interface LocalChatMessage {
     id: string;
     type: 'user' | 'ai';
     message: string;
     timestamp: Date;
+    mood?: 'neutral' | 'happy' | 'sad' | 'curious' | 'supportive';
+    response_type?: 'normal' | 'educational' | 'redirect' | 'supportive';
 }
 
 export default function CareCompanionPage() {
@@ -36,6 +38,13 @@ export default function CareCompanionPage() {
     const [currentSession, setCurrentSession] = useState<ChatSession | null>(null)
     const [showNewSessionModal, setShowNewSessionModal] = useState(false)
     const [newSessionTitle, setNewSessionTitle] = useState('')
+
+    // Mood and context state
+    const [currentMood, setCurrentMood] = useState<'neutral' | 'happy' | 'sad' | 'curious' | 'supportive'>('neutral')
+    const [moodHistory, setMoodHistory] = useState<Array<{ mood: string, timestamp: string }>>([])
+    const [conversationContext, setConversationContext] = useState<ConversationContext | null>(null)
+    const [shouldRedirect, setShouldRedirect] = useState(false)
+    const [redirectSuggestions, setRedirectSuggestions] = useState<string[]>([])
 
     // Auth and session management
     useEffect(() => {
@@ -122,14 +131,48 @@ export default function CareCompanionPage() {
                 id: msg.id,
                 type: msg.message_type,
                 message: msg.content,
-                timestamp: new Date(msg.created_at)
+                timestamp: new Date(msg.created_at),
+                mood: msg.mood,
+                response_type: msg.response_type
             }))
 
             setMessages(localMessages)
             console.log('Loaded messages:', localMessages.length)
+
+            // Load conversation context and mood analysis
+            await loadConversationContext(sessionId)
         } catch (err) {
             showError('Failed to load session', 'Please try again')
             console.error('Load session error:', err)
+        }
+    }
+
+    const loadConversationContext = async (sessionId: string) => {
+        try {
+            console.log('Loading conversation context for session:', sessionId)
+            const context = await apiService.getConversationContext(sessionId)
+            setConversationContext(context)
+
+            // Update mood history
+            if (context.mood_history) {
+                setMoodHistory(context.mood_history)
+                // Set current mood from the latest entry
+                if (context.mood_history.length > 0) {
+                    const latestMood = context.mood_history[context.mood_history.length - 1]
+                    setCurrentMood(latestMood.mood as any)
+                }
+            }
+
+            // Check if conversation should be redirected
+            if (context.context_summary?.should_redirect) {
+                setShouldRedirect(true)
+                setRedirectSuggestions(context.context_summary.redirect_suggestions || [])
+            } else {
+                setShouldRedirect(false)
+                setRedirectSuggestions([])
+            }
+        } catch (err) {
+            console.error('Failed to load conversation context:', err)
         }
     }
 
@@ -154,7 +197,7 @@ export default function CareCompanionPage() {
     const sendMessage = async () => {
         if (!inputMessage.trim() || isTyping) return
 
-        console.log('Sending message:', inputMessage.substring(0, 50) + '...')
+        console.log('Sending message with mood analysis:', inputMessage.substring(0, 50) + '...')
 
         // Create new session if none exists
         let sessionId = currentSession?.id
@@ -183,22 +226,46 @@ export default function CareCompanionPage() {
         setIsTyping(true)
 
         try {
-            // Save user message to db
-            await apiService.addMessageToSession(sessionId, 'user', inputMessage.trim())
+            // Use the new enhanced message processing with mood analysis
+            const response = await apiService.processUserMessage(sessionId, inputMessage.trim())
 
-            const response = await apiService.chatWithGemini({ message: inputMessage.trim() })
-
+            // Convert response to local format
             const aiMessage: LocalChatMessage = {
-                id: (Date.now() + 1).toString(),
-                type: 'ai',
-                message: response.response,
-                timestamp: new Date(),
+                id: response.ai_response.id,
+                type: response.ai_response.message_type,
+                message: response.ai_response.content,
+                timestamp: new Date(response.ai_response.created_at),
+                mood: response.ai_response.mood,
+                response_type: response.ai_response.response_type
             }
 
             setMessages(prev => [...prev, aiMessage])
 
-            // Save AI message to database
-            await apiService.addMessageToSession(sessionId, 'ai', response.response)
+            // Update mood and context from processing results
+            const processingResults = response.processing_results
+            if (processingResults.mood_analysis) {
+                setCurrentMood(processingResults.mood_analysis.mood)
+                setMoodHistory(prev => [...prev, {
+                    mood: processingResults.mood_analysis.mood,
+                    timestamp: new Date().toISOString()
+                }])
+            }
+
+            // Handle redirect suggestions
+            if (processingResults.should_redirect && processingResults.redirect_suggestions.length > 0) {
+                setShouldRedirect(true)
+                setRedirectSuggestions(processingResults.redirect_suggestions)
+                showSuccess('I notice you might benefit from a change of topic. Here are some suggestions!')
+            } else {
+                setShouldRedirect(false)
+                setRedirectSuggestions([])
+            }
+
+            // Show educational response notification if applicable
+            if (processingResults.mood_analysis?.mood === 'curious' && processingResults.response_guidance?.approach === 'educational') {
+                showSuccess('I\'m here to help you learn! Let me provide some educational context.')
+            }
+
         } catch (err: any) {
             // Handle guardrail errors specifically
             if (err.message && err.message.includes('warnings')) {
@@ -240,6 +307,13 @@ export default function CareCompanionPage() {
             console.log('Enter key pressed, sending message')
             sendMessage()
         }
+    }
+
+    const handleRedirectSuggestion = (suggestion: string) => {
+        setInputMessage(suggestion)
+        setShouldRedirect(false)
+        setRedirectSuggestions([])
+        showSuccess('Great choice! Let\'s explore that topic together.')
     }
 
     if (loading) {
@@ -372,7 +446,16 @@ export default function CareCompanionPage() {
                                     </div>
                                     <div>
                                         <h3 className="text-white font-semibold text-lg">CareCompanion</h3>
-                                        <p className="text-gray-300 text-sm">Mood: neutral</p>
+                                        <p className="text-gray-300 text-sm">
+                                            Mood: <span className={`font-medium ${currentMood === 'happy' ? 'text-green-400' :
+                                                currentMood === 'sad' ? 'text-blue-400' :
+                                                    currentMood === 'curious' ? 'text-yellow-400' :
+                                                        currentMood === 'supportive' ? 'text-purple-400' :
+                                                            'text-gray-400'
+                                                }`}>
+                                                {currentMood}
+                                            </span>
+                                        </p>
                                     </div>
                                 </div>
 
@@ -380,6 +463,24 @@ export default function CareCompanionPage() {
                                 <div className="text-gray-300 text-sm">
                                     Balance Mode • Usage nudges enabled
                                 </div>
+
+                                {/* Redirect Suggestions */}
+                                {shouldRedirect && redirectSuggestions.length > 0 && (
+                                    <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3">
+                                        <h4 className="text-yellow-300 font-semibold text-sm mb-2">💡 Topic Suggestions</h4>
+                                        <div className="space-y-1">
+                                            {redirectSuggestions.slice(0, 3).map((suggestion, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => handleRedirectSuggestion(suggestion)}
+                                                    className="block w-full text-left text-yellow-200 text-xs hover:text-yellow-100 hover:bg-yellow-500/10 p-2 rounded transition-colors"
+                                                >
+                                                    • {suggestion}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Chat Messages */}
                                 <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -402,9 +503,26 @@ export default function CareCompanionPage() {
                                                         }`}
                                                 >
                                                     <p className="whitespace-pre-wrap">{message.message}</p>
-                                                    <p className="text-xs opacity-70 mt-2">
-                                                        {message.timestamp.toLocaleTimeString()}
-                                                    </p>
+                                                    <div className="flex items-center justify-between mt-2">
+                                                        <p className="text-xs opacity-70">
+                                                            {message.timestamp.toLocaleTimeString()}
+                                                        </p>
+                                                        {message.mood && message.type === 'ai' && (
+                                                            <span className={`text-xs px-2 py-1 rounded-full ${message.mood === 'happy' ? 'bg-green-500/20 text-green-300' :
+                                                                message.mood === 'sad' ? 'bg-blue-500/20 text-blue-300' :
+                                                                    message.mood === 'curious' ? 'bg-yellow-500/20 text-yellow-300' :
+                                                                        message.mood === 'supportive' ? 'bg-purple-500/20 text-purple-300' :
+                                                                            'bg-gray-500/20 text-gray-300'
+                                                                }`}>
+                                                                {message.mood}
+                                                            </span>
+                                                        )}
+                                                        {message.response_type && message.response_type !== 'normal' && (
+                                                            <span className="text-xs px-2 py-1 rounded-full bg-orange-500/20 text-orange-300">
+                                                                {message.response_type}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))
@@ -468,10 +586,10 @@ export default function CareCompanionPage() {
                                     <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
                                         Generate Collaboration Summary
                                     </button>
-                                    <button className="bg-gray-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
+                                    <button className="bg-gray-500 hover:bg-black-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
                                         Explore Community
                                     </button>
-                                    <button className="bg-gray-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
+                                    <button className="bg-gray-500 hover:bg-black-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
                                         Run Sanitize Tests
                                     </button>
                                 </div>
@@ -495,10 +613,29 @@ export default function CareCompanionPage() {
                                     We detect mood trends and personalize coping strategies.
                                 </p>
                                 <div className="space-y-2">
-                                    <div className="text-gray-300 text-sm">Mood: neutral</div>
-                                    <div className="text-gray-400 text-xs">Last check: a few minutes ago</div>
+                                    <div className="text-gray-300 text-sm">
+                                        Mood: <span className={`font-medium ${currentMood === 'happy' ? 'text-green-400' :
+                                            currentMood === 'sad' ? 'text-blue-400' :
+                                                currentMood === 'curious' ? 'text-yellow-400' :
+                                                    currentMood === 'supportive' ? 'text-purple-400' :
+                                                        'text-gray-400'
+                                            }`}>
+                                            {currentMood}
+                                        </span>
+                                    </div>
+                                    <div className="text-gray-400 text-xs">
+                                        Last check: {moodHistory.length > 0 ? 'just now' : 'not detected'}
+                                    </div>
+                                    {moodHistory.length > 0 && (
+                                        <div className="text-gray-400 text-xs">
+                                            Mood changes: {moodHistory.length - 1}
+                                        </div>
+                                    )}
                                 </div>
-                                <button className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200">
+                                <button
+                                    onClick={() => currentSession && loadConversationContext(currentSession.id)}
+                                    className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200"
+                                >
                                     View Insights
                                 </button>
                             </div>

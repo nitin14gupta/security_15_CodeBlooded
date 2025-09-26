@@ -1,10 +1,14 @@
 """
 Comprehensive Guardrails Service
 Combines PII detection, toxicity detection, and input validation
+Now includes educational responses instead of blocking
 """
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 from .pii_guard import pii_guard
 from .input_guard import input_guard
+from .mood_analysis import mood_analyzer
+from .educational_responses import educational_service
+from .conversation_context import context_manager
 
 class GuardrailsService:
     def __init__(self):
@@ -22,22 +26,28 @@ class GuardrailsService:
             'block_on_high_risk': True
         }
     
-    def process_message(self, message: str, user_id: Optional[str] = None) -> Dict:
+    def process_message(self, message: str, user_id: Optional[str] = None, session_id: Optional[str] = None, user_preferences: Optional[Dict] = None) -> Dict:
         """
-        Process a message through all guardrails
+        Process a message through all guardrails with educational responses
         
         Args:
             message (str): User message to process
             user_id (str, optional): User ID for logging
+            session_id (str, optional): Chat session ID for context
+            user_preferences (Dict, optional): User's onboarding preferences
             
         Returns:
-            Dict: Processing results with safety status and processed message
+            Dict: Processing results with safety status and educational responses
         """
         results = {
             'original_message': message,
             'processed_message': message,
             'is_safe': True,
             'should_block': False,
+            'response_type': 'normal',
+            'educational_response': None,
+            'mood_analysis': None,
+            'context_guidance': None,
             'warnings': [],
             'pii_detected': False,
             'pii_scrubbed': False,
@@ -48,6 +58,16 @@ class GuardrailsService:
         }
         
         try:
+            # Get conversation context if session_id provided
+            conversation_history = []
+            if session_id and user_id:
+                context = context_manager.get_context(user_id, session_id, user_preferences)
+                conversation_history = context.get_recent_context()
+            
+            # Mood Analysis
+            mood_analysis = mood_analyzer.analyze_mood(message, conversation_history)
+            results['mood_analysis'] = mood_analysis
+            
             # Input Validation
             if self.config['enable_input_validation']:
                 validation_results = self.input_guard.validate_input(message)
@@ -58,7 +78,8 @@ class GuardrailsService:
                     results['processing_log'].append("Input validation failed")
                     return results
             
-            #Toxicity Detection
+            # Toxicity Detection
+            toxicity_detected = False
             if self.config['enable_toxicity_detection']:
                 toxicity_results = self.input_guard.detect_toxicity(
                     message, 
@@ -67,20 +88,25 @@ class GuardrailsService:
                 
                 if toxicity_results.get('is_toxic', False):
                     results['toxicity_detected'] = True
-                    results['should_block'] = True
+                    toxicity_detected = True
                     results['warnings'].append(
                         f"Message contains toxic content ({toxicity_results.get('max_category', 'unknown')})"
                     )
                     results['processing_log'].append("Toxicity detected")
-                    return results
             
-            #Restricted Content Check
+            # Restricted Content Check - Now with Educational Responses
             content_results = self.input_guard.check_restricted_content(message)
             if content_results['has_restricted_content']:
-                results['should_block'] = True
-                results['warnings'].append("Message contains restricted content or spam patterns")
-                results['processing_log'].append("Restricted content detected")
-                return results
+                # Instead of blocking, provide educational response
+                results['response_type'] = 'educational'
+                results['educational_response'] = self._generate_educational_response(
+                    content_results, user_preferences, mood_analysis
+                )
+                results['processing_log'].append("Educational response generated for restricted content")
+                
+                # Don't block, but mark as requiring special handling
+                results['should_block'] = False
+                results['is_safe'] = True  # Safe to process with educational response
             
             #PII Detection and Scrubbing
             pii_summary = self.pii_guard.get_pii_summary(message)
@@ -127,6 +153,114 @@ class GuardrailsService:
             results['processing_log'].append(f"Error: {str(e)}")
         
         return results
+    
+    def _generate_educational_response(self, content_results: Dict, user_preferences: Dict, mood_analysis: Dict) -> Dict:
+        """Generate educational response for restricted content"""
+        # Determine content type based on found keywords
+        content_type = self._classify_content_type(content_results.get('found_keywords', []))
+        
+        # Generate educational response
+        educational_response = educational_service.generate_educational_response(
+            content_type, user_preferences, mood_analysis
+        )
+        
+        # Add mood-based personalization
+        if mood_analysis.get('mood') in ['sad', 'supportive']:
+            educational_response['tone'] = 'empathetic'
+            educational_response['approach'] = 'supportive'
+        elif mood_analysis.get('mood') == 'curious':
+            educational_response['tone'] = 'educational'
+            educational_response['approach'] = 'informative'
+        
+        return educational_response
+    
+    def _classify_content_type(self, keywords: List[str]) -> str:
+        """Classify content type based on keywords"""
+        keyword_mapping = {
+            'nudity': ['nude', 'naked', 'nudity', 'explicit'],
+            'violence': ['violence', 'kill', 'murder', 'weapon', 'fight'],
+            'drugs': ['drug', 'alcohol', 'substance', 'intoxicated'],
+            'illegal': ['illegal', 'crime', 'steal', 'fraud'],
+            'hate': ['hate', 'discriminate', 'racist', 'sexist']
+        }
+        
+        for content_type, type_keywords in keyword_mapping.items():
+            if any(keyword in ' '.join(keywords).lower() for keyword in type_keywords):
+                return content_type
+        
+        return 'general'
+    
+    def process_message_v2(self, message: str, user_id: str, session_id: str, user_preferences: Dict = None) -> Dict:
+        """
+        Enhanced message processing with mood analysis and educational responses
+        
+        Args:
+            message (str): User message
+            user_id (str): User ID
+            session_id (str): Session ID
+            user_preferences (Dict): User preferences
+            
+        Returns:
+            Dict: Enhanced processing results
+        """
+        # Get conversation context
+        context = context_manager.get_context(user_id, session_id, user_preferences)
+        conversation_history = context.get_recent_context()
+        
+        # Process through guardrails
+        guardrails_results = self.process_message(
+            message, user_id, session_id, user_preferences
+        )
+        
+        # Analyze mood
+        mood_analysis = guardrails_results.get('mood_analysis', {})
+        current_mood = mood_analysis.get('mood', 'neutral')
+        mood_confidence = mood_analysis.get('confidence', 0.0)
+        
+        # Update context with new message and mood
+        context_manager.update_context(
+            session_id, 
+            {'content': message, 'message_type': 'user'}, 
+            current_mood, 
+            mood_confidence
+        )
+        
+        # Determine response type and generate guidance
+        response_guidance = self._generate_response_guidance(
+            guardrails_results, mood_analysis, context
+        )
+        
+        # Check if conversation should be redirected
+        should_redirect = context.should_redirect()
+        redirect_suggestions = context.get_redirect_suggestions() if should_redirect else []
+        
+        return {
+            **guardrails_results,
+            'response_guidance': response_guidance,
+            'should_redirect': should_redirect,
+            'redirect_suggestions': redirect_suggestions,
+            'context_summary': context_manager.get_context_summary(session_id)
+        }
+    
+    def _generate_response_guidance(self, guardrails_results: Dict, mood_analysis: Dict, context) -> Dict:
+        """Generate guidance for response generation"""
+        mood = mood_analysis.get('mood', 'neutral')
+        confidence = mood_analysis.get('confidence', 0.0)
+        
+        # Get mood-based guidance
+        guidance = mood_analyzer.get_mood_based_response_guidance(mood, {}, context.user_preferences)
+        
+        # Add educational response guidance if needed
+        if guardrails_results.get('response_type') == 'educational':
+            guidance['educational_content'] = guardrails_results.get('educational_response')
+            guidance['approach'] = 'educational'
+        
+        # Add context awareness
+        if context.topics_discussed:
+            guidance['context_aware'] = True
+            guidance['recent_topics'] = context.topics_discussed[-3:]
+        
+        return guidance
     
     def get_safety_report(self, message: str) -> Dict:
         """

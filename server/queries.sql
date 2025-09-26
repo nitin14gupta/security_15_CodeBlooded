@@ -95,6 +95,9 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     message_type VARCHAR(20) NOT NULL CHECK (message_type IN ('user', 'ai')),
     content TEXT NOT NULL,
+    mood VARCHAR(20) DEFAULT 'neutral' CHECK (mood IN ('neutral', 'happy', 'sad', 'curious', 'supportive')),
+    response_type VARCHAR(30) DEFAULT 'normal' CHECK (response_type IN ('normal', 'educational', 'redirect', 'supportive')),
+    context_data JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -102,6 +105,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_type ON chat_messages(message_type);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_mood ON chat_messages(mood);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_response_type ON chat_messages(response_type);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
 
 -- Insert a default admin user (password: admin123)
