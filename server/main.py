@@ -7,11 +7,7 @@ from db.config import db_config
 from routes.auth_routes import auth_bp
 from routes.google_auth_routes import auth_google_bp
 from routes.apple_auth_routes import auth_apple_bp
-from routes.push_routes import push_bp
-from routes.iap_routes import iap_bp
-from routes.analysis_routes import analysis_bp
-from utils.push_service import push_service
-import random
+# Unused routes removed
 from db.config import db_config
 
 # Load environment variables
@@ -27,9 +23,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(auth_google_bp)
     app.register_blueprint(auth_apple_bp)
-    app.register_blueprint(push_bp)
-    app.register_blueprint(iap_bp)
-    app.register_blueprint(analysis_bp)
+    # Only auth routes are registered
     
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])

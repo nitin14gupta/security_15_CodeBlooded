@@ -55,7 +55,9 @@ export interface AuthResponse {
     token: string;
     user: {
         id: string;
+        username: string;
         email: string;
+        user_type: string;
         is_verified: boolean;
         onboarding_data?: any;
     };
@@ -63,7 +65,9 @@ export interface AuthResponse {
 
 export interface User {
     id: string;
+    username: string;
     email: string;
+    user_type: string;
     is_verified: boolean;
     onboarding_data?: any;
     created_at?: string;
