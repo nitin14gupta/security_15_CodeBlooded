@@ -29,19 +29,19 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-black flex items-center justify-center p-4">
             {/* Background Elements */}
             <div className="absolute inset-0">
-                <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full opacity-20 animate-pulse"></div>
-                <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full opacity-30 animate-bounce"></div>
-                <div className="absolute bottom-20 left-1/4 w-40 h-40 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full opacity-25 animate-pulse"></div>
+                <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full opacity-20 animate-pulse"></div>
+                <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-30 animate-bounce"></div>
+                <div className="absolute bottom-20 left-1/4 w-40 h-40 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full opacity-25 animate-pulse"></div>
             </div>
 
             <div className="relative z-10 w-full max-w-md">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="text-3xl font-bold text-white">
-                        <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+                    <Link href="/" className="text-4xl font-bold text-white">
+                        <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
                             SecurityApp
                         </span>
                     </Link>
@@ -62,7 +62,7 @@ export default function LoginPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300"
+                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300"
                                 placeholder="Enter your email"
                             />
                         </div>
@@ -77,7 +77,7 @@ export default function LoginPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300"
+                                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300"
                                 placeholder="Enter your password"
                             />
                         </div>
@@ -85,7 +85,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3 px-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold rounded-lg hover:from-pink-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                            className="w-full py-3 px-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-semibold rounded-lg hover:from-teal-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                         >
                             {loading ? 'Signing In...' : 'Sign In'}
                         </button>
@@ -96,7 +96,7 @@ export default function LoginPage() {
                             Don't have an account?{' '}
                             <Link
                                 href="/register"
-                                className="text-pink-400 hover:text-pink-300 font-medium transition-colors"
+                                className="text-teal-400 hover:text-teal-300 font-medium transition-colors"
                             >
                                 Sign up here
                             </Link>
