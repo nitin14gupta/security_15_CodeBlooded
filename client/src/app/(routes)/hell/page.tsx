@@ -57,7 +57,7 @@ export default function CareCompanionPage() {
                             </div>
                             <div>
                                 <h3 className="text-white font-semibold text-lg">CareCompanion</h3>
-                                <p className="text-gray-300 text-sm">AI Companion — Full Stack Implementation</p>
+                                <p className="text-gray-300 text-sm">Mood: neutral</p>
                             </div>
                         </div>
 
