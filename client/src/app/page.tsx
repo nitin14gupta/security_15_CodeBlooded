@@ -47,7 +47,7 @@ export default function Home() {
         }}
       >
         <Spline
-           scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode"
+           scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode" 
            style={{ 
             width: '100vw', 
             height: '100vh',
@@ -65,7 +65,7 @@ export default function Home() {
       <header className="absolute top-0 left-0 right-0 z-20 p-6 bg-black/20 backdrop-blur-sm">
         <nav className="flex justify-between items-center">
           <div className="text-2xl font-bold text-white">
-            <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
               SecurityApp
             </span>
           </div>
@@ -78,7 +78,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => router.push("/register")}
-              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all duration-300 shadow-lg"
+              className="px-6 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all duration-300 shadow-lg"
             >
               Register
             </button>

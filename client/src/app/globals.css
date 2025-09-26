@@ -32,7 +32,7 @@ canvas {
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
-  z-index: 1 !important;
+  z-index: 0 !important;
 }
 
 /* Ensure Spline container takes full screen */
@@ -42,5 +42,17 @@ canvas {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  z-index: 1 !important;
+  z-index: 0 !important;
+}
+
+/* Ensure header is always visible */
+header {
+  z-index: 50 !important;
+  position: absolute !important;
+}
+
+/* Ensure footer is always visible */
+footer {
+  z-index: 50 !important;
+  position: absolute !important;
 }
