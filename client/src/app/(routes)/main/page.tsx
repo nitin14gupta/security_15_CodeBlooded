@@ -329,23 +329,18 @@ export default function MainDashboard() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col">
                 {/* Header */}
-                <header className="bg-white/10 backdrop-blur-lg border-b border-white/20 p-4 w-full mr-20">
+                <header className="backdrop-blur-lg p-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-2xl font-bold text-white">AI Security Assistant</h2>
-                        <div className="flex items-center space-x-4 mr-20">
-                            <div className="text-white">
-                                Welcome, <span className="font-semibold">{user?.name}</span>
-                            </div>
-                        </div>
                     </div>
                 </header>
 
                 {/* Chat Interface */}
-                <div className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col min-h-0">
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4 mt-20">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
                         {messages.length === 0 ? (
-                            <div className="text-center text-gray-300 mt-20">
+                            <div className="flex flex-col items-center justify-center h-full text-center text-gray-300">
                                 <div className="text-6xl mb-4">🤖</div>
                                 <h3 className="text-2xl font-semibold mb-2">Welcome to AI Security Assistant</h3>
                                 <p className="text-lg">Ask me anything about security, technology, or get help with your tasks!</p>

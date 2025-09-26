@@ -1,16 +1,18 @@
 """
 Comprehensive Guardrails Service
-Combines PII detection, toxicity detection, and input validation
+Combines PII detection, toxicity detection, input validation, and output validation
 """
 from typing import Dict, Tuple, Optional
 from .pii_guard import pii_guard
 from .input_guard import input_guard
+from .output_guard import output_validator
 
 class GuardrailsService:
     def __init__(self):
         """Initialize the comprehensive guardrails service"""
         self.pii_guard = pii_guard
         self.input_guard = input_guard
+        self.output_validator = output_validator
         
         # Configuration
         self.config = {
@@ -19,6 +21,7 @@ class GuardrailsService:
             'enable_pii_scrubbing': True,
             'enable_toxicity_detection': True,
             'enable_input_validation': True,
+            'enable_output_validation': True,
             'block_on_high_risk': True
         }
     
@@ -193,6 +196,95 @@ class GuardrailsService:
             report['error'] = f"Safety analysis failed: {str(e)}"
         
         return report
+    
+    def validate_ai_output(self, ai_response: str, original_user_input: str = "", user_id: Optional[str] = None) -> Dict:
+        """
+        Validate AI-generated responses for safety and appropriateness
+        
+        Args:
+            ai_response (str): The AI-generated response to validate
+            original_user_input (str): The original user input for context
+            user_id (str, optional): User ID for logging
+            
+        Returns:
+            Dict: Validation results with safety status and processed response
+        """
+        results = {
+            'original_response': ai_response,
+            'processed_response': ai_response,
+            'is_safe': True,
+            'should_block': False,
+            'warnings': [],
+            'pii_detected': False,
+            'pii_scrubbed': False,
+            'toxicity_detected': False,
+            'prohibited_content_detected': False,
+            'quality_issues': False,
+            'risk_level': 'LOW',
+            'fallback_used': False,
+            'processing_log': []
+        }
+        
+        try:
+            if not self.config['enable_output_validation']:
+                results['processing_log'].append("Output validation disabled")
+                return results
+            
+            # Use the output validator
+            validation_result = self.output_validator.validate_ai_response(
+                ai_response, 
+                original_user_input
+            )
+            
+            # Process validation results
+            results['is_safe'] = validation_result.is_safe
+            results['should_block'] = not validation_result.is_safe
+            results['processed_response'] = validation_result.cleaned_response
+            results['fallback_used'] = validation_result.fallback_used
+            results['risk_level'] = validation_result.risk_level
+            
+            # Categorize violations
+            for violation in validation_result.violations:
+                if 'pii' in violation:
+                    results['pii_detected'] = True
+                    results['warnings'].append(f"PII detected in AI response: {violation}")
+                elif 'toxic' in violation:
+                    results['toxicity_detected'] = True
+                    results['warnings'].append(f"Toxic content in AI response: {violation}")
+                elif 'prohibited' in violation:
+                    results['prohibited_content_detected'] = True
+                    results['warnings'].append(f"Prohibited content in AI response: {violation}")
+                elif any(quality_term in violation for quality_term in ['quality', 'repetitive', 'short', 'long']):
+                    results['quality_issues'] = True
+                    results['warnings'].append(f"Quality issue in AI response: {violation}")
+                else:
+                    results['warnings'].append(f"Other issue in AI response: {violation}")
+            
+            # Check if PII was scrubbed
+            if results['pii_detected'] and results['processed_response'] != results['original_response']:
+                results['pii_scrubbed'] = True
+            
+            results['processing_log'].append(f"Output validation complete - Risk level: {results['risk_level']}")
+            
+        except Exception as e:
+            results['should_block'] = True
+            results['warnings'].append(f"Output validation failed: {str(e)}")
+            results['processing_log'].append(f"Error: {str(e)}")
+        
+        return results
+    
+    def get_output_validation_summary(self, ai_response: str, original_user_input: str = "") -> Dict:
+        """
+        Get a summary of output validation without blocking
+        
+        Args:
+            ai_response (str): AI response to analyze
+            original_user_input (str): Original user input for context
+            
+        Returns:
+            Dict: Validation summary
+        """
+        return self.output_validator.get_validation_summary(ai_response, original_user_input)
     
     def update_config(self, new_config: Dict):
         """Update guardrails configuration"""
