@@ -7,7 +7,6 @@ CREATE TABLE users (
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     is_verified BOOLEAN DEFAULT FALSE,
                     onboarding_data JSONB,
-                    -- premium features removed
                     user_type VARCHAR(20) DEFAULT 'user'
                 );
                 
