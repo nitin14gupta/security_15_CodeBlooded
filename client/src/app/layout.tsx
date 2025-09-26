@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { OnboardingProvider } from "@/context/onboardingContext";
 
 // Root layout component
 
@@ -33,9 +34,11 @@ export default function RootLayout({
       >
         {/* Wrap everything in context providers */}
         <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <OnboardingProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </OnboardingProvider>
         </AuthProvider>
       </body>
     </html>

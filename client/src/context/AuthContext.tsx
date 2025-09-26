@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiService } from '@/api/apiService';
+import { apiService, OnboardingData } from '@/api/apiService';
 
 // Auth context for managing user authentication state
 
@@ -18,7 +18,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (name: string, email: string, password: string, isAdmin: boolean) => Promise<void>;
+    register: (name: string, email: string, password: string, isAdmin: boolean, onboarding?: OnboardingData) => Promise<void>;
     logout: () => Promise<void>;
     isAuthenticated: boolean;
 }
@@ -96,15 +96,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
-    const register = async (name: string, email: string, password: string, isAdmin: boolean) => {
+    const register = async (name: string, email: string, password: string, isAdmin: boolean, onboarding?: OnboardingData) => {
         try {
             setLoading(true);
-            console.log('Registering new user:', email, 'isAdmin:', isAdmin); // debug
+            console.log('Registering new user:', email, 'isAdmin:', isAdmin, 'with onboarding:', !!onboarding); // debug
             const data = await apiService.register({
                 name,
                 email,
                 password,
-                user_type: isAdmin ? 'admin' : 'user'
+                user_type: isAdmin ? 'admin' : 'user',
+                onboarding
             });
 
             localStorage.setItem('auth_token', data.token);

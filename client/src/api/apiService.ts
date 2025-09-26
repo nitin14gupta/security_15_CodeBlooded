@@ -6,11 +6,21 @@ export interface LoginRequest {
     password: string;
 }
 
+export interface OnboardingData {
+    morningPreference: string;
+    dayColor: string;
+    moodEmoji: string;
+    lifeGenre: string;
+    weeklyGoal: string;
+    favoriteApp: string;
+}
+
 export interface RegisterRequest {
     name: string;
     email: string;
     password: string;
     user_type: 'user' | 'admin';
+    onboarding?: OnboardingData;
 }
 
 export interface AuthResponse {

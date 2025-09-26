@@ -5,6 +5,14 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     user_type VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (user_type IN ('user', 'admin')),
+    -- Onboarding fields
+    morning_preference VARCHAR(50), -- tea, coffee, good_vibes
+    day_color VARCHAR(50),
+    mood_emoji VARCHAR(10),
+    life_genre VARCHAR(20), -- comedy, drama, adventure
+    weekly_goal TEXT,
+    favorite_app VARCHAR(100),
+    onboarding_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE

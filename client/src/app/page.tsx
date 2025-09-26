@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Spline from "@splinetool/react-spline";
+import { useOnboarding } from "@/context/onboardingContext";
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const { isOnboardingComplete } = useOnboarding();
 
   useEffect(() => {
     setMounted(true);
@@ -77,10 +79,17 @@ export default function Home() {
               Login
             </button>
             <button
-              onClick={() => router.push("/register")}
+              onClick={() => {
+                // Check if onboarding is complete, if not go to onboarding first
+                if (isOnboardingComplete()) {
+                  router.push("/register");
+                } else {
+                  router.push("/onboarding");
+                }
+              }}
               className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all duration-300 shadow-lg cursor-pointer"
             >
-              Register
+              {isOnboardingComplete() ? 'Register' : '✨ Start Your Journey'}
             </button>
           </div>
         </nav>

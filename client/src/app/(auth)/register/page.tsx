@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { useOnboarding } from '@/context/onboardingContext';
 
 // Registration page component
 export default function RegisterPage() {
@@ -16,6 +17,7 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
     const { showError, showSuccess } = useToast();
+    const { onboardingData, isOnboardingComplete } = useOnboarding();
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +39,9 @@ export default function RegisterPage() {
         setLoading(true);
 
         try {
-            await register(name, email, password, isAdmin);
+            // Include onboarding data if available
+            const onboardingPayload = isOnboardingComplete() ? onboardingData : undefined;
+            await register(name, email, password, isAdmin, onboardingPayload);
             showSuccess('Registration successful', 'Welcome to SecurityApp!');
         } catch (err) {
             console.error('Registration error:', err); // debg
@@ -150,16 +154,45 @@ export default function RegisterPage() {
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center">
-                        <p className="text-gray-300">
-                            Already have an account?{' '}
-                            <Link
-                                href="/login"
-                                className="text-teal-400 hover:text-teal-300 font-medium transition-colors"
-                            >
-                                Sign in here
-                            </Link>
-                        </p>
+                    <div className="mt-6 text-center space-y-4">
+                        <div>
+                            {isOnboardingComplete() ? (
+                                <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
+                                    <div className="flex items-center space-x-2 text-green-400">
+                                        <span className="text-lg">✅</span>
+                                        <span className="font-medium">Onboarding Complete!</span>
+                                    </div>
+                                    <p className="text-green-300 text-sm mt-1">
+                                        Your answers will personalize your experience
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/onboarding')}
+                                        className="w-full py-3 px-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:from-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 shadow-lg"
+                                    >
+                                        ✨ Start with Fun Questions
+                                    </button>
+                                    <p className="text-gray-400 text-sm mt-2">
+                                        Answer a few fun questions to personalize your experience
+                                    </p>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="border-t border-gray-600 pt-4">
+                            <p className="text-gray-300">
+                                Already have an account?{' '}
+                                <Link
+                                    href="/login"
+                                    className="text-teal-400 hover:text-teal-300 font-medium transition-colors"
+                                >
+                                    Sign in here
+                                </Link>
+                            </p>
+                        </div>
                     </div>
                 </div>
 

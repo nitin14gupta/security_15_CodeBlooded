@@ -58,6 +58,18 @@ def register():
         password = data['password']
         user_type = data['user_type']
         
+        # Extract onboarding data (optional)
+        onboarding_data = data.get('onboarding', {})
+        morning_preference = onboarding_data.get('morningPreference', '')
+        day_color = onboarding_data.get('dayColor', '')
+        mood_emoji = onboarding_data.get('moodEmoji', '')
+        life_genre = onboarding_data.get('lifeGenre', '')
+        weekly_goal = onboarding_data.get('weeklyGoal', '')
+        favorite_app = onboarding_data.get('favoriteApp', '')
+        onboarding_completed = bool(onboarding_data and any([
+            morning_preference, day_color, mood_emoji, life_genre, weekly_goal, favorite_app
+        ]))
+        
         # Validate user_type
         if user_type not in ['user', 'admin']:
             return jsonify({'error': 'Invalid user type'}), 400
@@ -84,7 +96,14 @@ def register():
             'email': email,
             'password_hash': password_hash,
             'user_type': user_type,
-            'is_active': True
+            'is_active': True,
+            'morning_preference': morning_preference,
+            'day_color': day_color,
+            'mood_emoji': mood_emoji,
+            'life_genre': life_genre,
+            'weekly_goal': weekly_goal,
+            'favorite_app': favorite_app,
+            'onboarding_completed': onboarding_completed
         }
         
         result = supabase.table('users').insert(user_data).execute()
