@@ -100,7 +100,7 @@ const OnboardingPage = () => {
             <div className="w-full max-w-2xl">
                 {/* Progress Bar */}
                 <div className="mb-8">
-                    <div className="flex justify-between text-sm text-gray-400 mb-2">
+                    <div className="flex justify-between text-caption text-gray-400 mb-2">
                         <span>Step {currentStep + 1} of {questions.length}</span>
                         <span>{Math.round(((currentStep + 1) / questions.length) * 100)}%</span>
                     </div>
@@ -114,7 +114,7 @@ const OnboardingPage = () => {
 
                 {/* Question Card */}
                 <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-8 shadow-2xl">
-                    <h2 className="text-2xl font-bold text-white mb-8 text-center leading-relaxed">
+                    <h2 className="text-2xl font-heading text-white mb-8 text-center leading-relaxed">
                         {currentQuestion.question}
                     </h2>
 
@@ -132,8 +132,8 @@ const OnboardingPage = () => {
                                             }`}
                                     >
                                         <div className="flex items-center space-x-3">
-                                            <span className="text-2xl">{option.emoji}</span>
-                                            <span className="font-medium">{option.label}</span>
+                                            <span className="text-2xl">{(option as any).emoji}</span>
+                                            <span className="font-accent">{option.label}</span>
                                         </div>
                                     </button>
                                 ))}
@@ -150,10 +150,10 @@ const OnboardingPage = () => {
                                             ? 'border-white scale-110'
                                             : 'border-gray-600 hover:border-gray-400'
                                             }`}
-                                        style={{ backgroundColor: option.color }}
+                                        style={{ backgroundColor: (option as any).color }}
                                     >
                                         <div className="text-center">
-                                            <div className="text-white font-medium text-sm">{option.label}</div>
+                                            <div className="text-white font-accent text-sm">{option.label}</div>
                                         </div>
                                     </button>
                                 ))}
@@ -172,7 +172,7 @@ const OnboardingPage = () => {
                                             }`}
                                     >
                                         <div className="text-4xl mb-2">{option.value}</div>
-                                        <div className="text-gray-300 text-sm">{option.label}</div>
+                                        <div className="text-gray-300 text-caption">{option.label}</div>
                                     </button>
                                 ))}
                             </div>
@@ -196,7 +196,7 @@ const OnboardingPage = () => {
                         <button
                             onClick={handlePrevious}
                             disabled={currentStep === 0}
-                            className="px-6 py-3 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-6 py-3 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-accent"
                         >
                             Previous
                         </button>
@@ -204,7 +204,7 @@ const OnboardingPage = () => {
                         <button
                             onClick={handleNext}
                             disabled={!currentAnswer}
-                            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
+                            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-accent"
                         >
                             {currentStep === questions.length - 1 ? '🎉 Complete & Register' : 'Next'}
                         </button>
@@ -215,7 +215,7 @@ const OnboardingPage = () => {
                 <div className="text-center mt-6">
                     <button
                         onClick={() => router.push('/register')}
-                        className="text-gray-400 hover:text-gray-300 text-sm underline"
+                        className="text-gray-400 hover:text-gray-300 text-caption underline font-accent"
                     >
                         Skip onboarding
                     </button>

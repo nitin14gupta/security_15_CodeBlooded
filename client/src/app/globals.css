@@ -8,8 +8,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-space-grotesk);
+  --font-accent: var(--font-poppins);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,7 +24,9 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-variation-settings: "slnt" 0;
 }
 
 /* Force Spline component to full screen */
@@ -55,4 +59,53 @@ header {
 footer {
   z-index: 50 !important;
   position: absolute !important;
+}
+
+/* Font utility classes */
+.font-heading {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.font-accent {
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  font-weight: 500;
+}
+
+.font-mono {
+  font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+/* Typography scale with better spacing */
+.text-display {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.text-hero {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.text-body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.text-caption {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-weight: 400;
+  opacity: 0.8;
 }
