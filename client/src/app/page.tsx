@@ -1,14 +1,7 @@
 "use client";
-<<<<<<< Updated upstream
-import React from 'react';
-import { useAuth } from '@/context/AuthContext';
-import Scene from '@/components/3D/Scene';
-import Spline from '@splinetool/react-spline';
-=======
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
->>>>>>> Stashed changes
 
 export default function Home() {
   const router = useRouter();
@@ -22,13 +15,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden">
-<<<<<<< Updated upstream
-      {/* 3D Background */}
-      <div className="absolute inset-0 z-0">
-        <Spline
-        scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode" 
-      />
-=======
       {/* 3D Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full opacity-20 animate-pulse"></div>
@@ -124,7 +110,6 @@ export default function Home() {
             }}
           />
         ))}
->>>>>>> Stashed changes
       </div>
     </div>
   );
