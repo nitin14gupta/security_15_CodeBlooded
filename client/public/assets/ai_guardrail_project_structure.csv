@@ -1,0 +1,43 @@
+File Path,Description
+AI_Guardrail_Hackathon_Project/backend/app.py,Main Flask application entry point
+AI_Guardrail_Hackathon_Project/backend/config.py,Configuration settings and environment variables
+AI_Guardrail_Hackathon_Project/backend/models/user.py,User database model
+AI_Guardrail_Hackathon_Project/backend/models/conversation.py,Conversation history model
+AI_Guardrail_Hackathon_Project/backend/models/audit_log.py,Audit logging model
+AI_Guardrail_Hackathon_Project/backend/guardrails/__init__.py,Guardrails package initialization
+AI_Guardrail_Hackathon_Project/backend/guardrails/input_filter.py,Input filtering and validation
+AI_Guardrail_Hackathon_Project/backend/guardrails/output_validator.py,Output content validation
+AI_Guardrail_Hackathon_Project/backend/guardrails/pii_detector.py,PII detection and scrubbing
+AI_Guardrail_Hackathon_Project/backend/guardrails/toxicity_detector.py,Toxicity detection using multiple APIs
+AI_Guardrail_Hackathon_Project/backend/guardrails/access_control.py,RBAC implementation
+AI_Guardrail_Hackathon_Project/backend/services/ai_service.py,"AI model integration (OpenAI, Anthropic, etc.)"
+AI_Guardrail_Hackathon_Project/backend/services/auth_service.py,Authentication and authorization
+AI_Guardrail_Hackathon_Project/backend/services/logging_service.py,Comprehensive audit logging
+AI_Guardrail_Hackathon_Project/backend/services/monitoring_service.py,Real-time monitoring and alerts
+AI_Guardrail_Hackathon_Project/backend/routes/auth.py,Authentication endpoints
+AI_Guardrail_Hackathon_Project/backend/routes/chat.py,Chat and conversation endpoints
+AI_Guardrail_Hackathon_Project/backend/routes/admin.py,Admin dashboard endpoints
+AI_Guardrail_Hackathon_Project/backend/routes/api.py,General API endpoints
+AI_Guardrail_Hackathon_Project/backend/utils/decorators.py,Custom decorators for auth and logging
+AI_Guardrail_Hackathon_Project/backend/utils/validators.py,Input validation utilities
+AI_Guardrail_Hackathon_Project/backend/utils/helpers.py,General helper functions
+AI_Guardrail_Hackathon_Project/backend/requirements.txt,Python dependencies
+AI_Guardrail_Hackathon_Project/frontend/pages/index.js,Landing page
+AI_Guardrail_Hackathon_Project/frontend/pages/login.js,Login page
+AI_Guardrail_Hackathon_Project/frontend/pages/chat.js,Main chat interface
+AI_Guardrail_Hackathon_Project/frontend/pages/admin.js,Admin dashboard
+AI_Guardrail_Hackathon_Project/frontend/components/ChatInterface.js,Main chat component
+AI_Guardrail_Hackathon_Project/frontend/components/MessageList.js,Message display component
+AI_Guardrail_Hackathon_Project/frontend/components/InputBox.js,Message input component
+AI_Guardrail_Hackathon_Project/frontend/components/AdminPanel.js,Admin control panel
+AI_Guardrail_Hackathon_Project/frontend/services/api.js,API service for backend communication
+AI_Guardrail_Hackathon_Project/frontend/services/auth.js,Frontend authentication service
+AI_Guardrail_Hackathon_Project/frontend/services/websocket.js,Real-time communication service
+AI_Guardrail_Hackathon_Project/frontend/utils/validators.js,Frontend input validation
+AI_Guardrail_Hackathon_Project/frontend/utils/formatters.js,Message formatting utilities
+AI_Guardrail_Hackathon_Project/frontend/package.json,Node.js dependencies
+AI_Guardrail_Hackathon_Project/config/development.env,Development environment variables
+AI_Guardrail_Hackathon_Project/config/production.env,Production environment variables
+AI_Guardrail_Hackathon_Project/docs/API_Documentation.md,Complete API documentation
+AI_Guardrail_Hackathon_Project/docs/Deployment_Guide.md,Deployment instructions
+AI_Guardrail_Hackathon_Project/docs/User_Guide.md,User manual
