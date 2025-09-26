@@ -95,68 +95,6 @@ export default function Home() {
         </nav>
       </header>
 
-      {/* Main Content */}
-      <div className="absolute inset-0 flex items-center justify-center z-20">
-        <div className="text-center max-w-4xl mx-auto px-6">
-          <h1 className="text-display text-white mb-6">
-            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-              SecurityApp
-            </span>
-          </h1>
-          <p className="text-hero text-gray-300 mb-8">
-            Advanced security solutions powered by cutting-edge AI technology
-          </p>
-
-          {/* Onboarding Flow Explanation */}
-          <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-8 border border-white/20 mb-8">
-            <h2 className="text-2xl font-heading text-white mb-4">🎯 Personalized Experience</h2>
-            <p className="text-body text-gray-300 mb-6">
-              Before you register, let's get to know you better! Answer a few fun questions to personalize your security experience.
-            </p>
-
-            <div className="grid md:grid-cols-3 gap-4 text-left">
-              <div className="bg-white/10 rounded-lg p-4">
-                <div className="text-2xl mb-2">☕</div>
-                <h3 className="font-heading text-white mb-1">Morning Vibes</h3>
-                <p className="text-caption">Tell us how you start your day</p>
-              </div>
-              <div className="bg-white/10 rounded-lg p-4">
-                <div className="text-2xl mb-2">🎨</div>
-                <h3 className="font-heading text-white mb-1">Color Your Day</h3>
-                <p className="text-caption">What color represents you today?</p>
-              </div>
-              <div className="bg-white/10 rounded-lg p-4">
-                <div className="text-2xl mb-2">🎬</div>
-                <h3 className="font-heading text-white mb-1">Life Genre</h3>
-                <p className="text-caption">Comedy, drama, or adventure?</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => {
-                if (isOnboardingComplete()) {
-                  router.push("/register");
-                } else {
-                  router.push("/onboarding");
-                }
-              }}
-              className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-lg font-accent rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105"
-            >
-              {isOnboardingComplete() ? '🚀 Complete Registration' : '✨ Start Your Journey'}
-            </button>
-
-            <button
-              onClick={() => router.push("/login")}
-              className="px-8 py-4 text-white border-2 border-white/30 rounded-xl hover:bg-white/10 transition-all duration-300 backdrop-blur-sm text-lg font-accent"
-            >
-              Already have an account? Login
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Footer */}
       <footer className="absolute bottom-0 left-0 right-0 z-20 p-6 bg-black backdrop-blur-sm border-t border-white/10">
         <div className="max-w-6xl mx-auto">
