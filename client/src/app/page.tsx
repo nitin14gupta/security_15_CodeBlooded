@@ -34,7 +34,7 @@ export default function Home() {
   if (!mounted) return null;
 
   return (
-    <div className="w-full h-screen relative overflow-hidden">
+    <div className="w-full min-h-screen relative">
       {/* Spline 3D Scene - Full Screen Background */}
       <div 
         className="spline-container fixed inset-0 w-screen h-screen"
@@ -88,8 +88,82 @@ export default function Home() {
 
       {/* Main Content */}
 
+      {/* Landing Section */}
+      <div className="relative z-30 h-screen flex items-end justify-center pb-20">
+        {/* Spline 3D Scene in Landing */}
+        <div className="absolute inset-0 w-full h-full">
+          <Spline
+            scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode"
+            style={{ 
+              width: '100%', 
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              objectFit: 'cover'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* AI Guardrails Section - Scrollable */}
+      <div className="relative z-30 min-h-screen bg-black/60 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto px-8 py-20">
+          <div className="bg-black/40 backdrop-blur-sm rounded-2xl p-12 border border-white/20">
+            <h2 className="text-4xl font-bold text-white mb-8 text-center">
+              <span className="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                Develop guardrails for AI models
+              </span>
+            </h2>
+            
+            <div className="text-gray-300 text-lg leading-relaxed space-y-6">
+              <p>
+                AI companions for intimacy are chatbots and virtual avatars that users interact with
+                for emotional support, friendship, and romantic connection, often through advanced
+                language models that learn user preferences and provide tailored, supportive
+                conversations. These AI partners offer continuous availability and user-centric interaction,
+                which can help alleviate loneliness and meet unmet emotional needs; however, they also
+                present significant risks, including user addiction, the potential for harmful suggestions, and
+                the danger of forming unhealthy attachments.
+              </p>
+              
+              <p className="text-xl font-semibold text-white mb-4">
+                Develop a system having proper guardrails for:
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <span className="text-teal-400 font-bold text-lg">a.</span>
+                  <span className="text-gray-300">Input filtering (toxicity, profanity, topic restrictions)</span>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <span className="text-teal-400 font-bold text-lg">b.</span>
+                  <span className="text-gray-300">Output filters/validation (check whether generated content aligns with retrieved evidence, no hallucination)</span>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <span className="text-teal-400 font-bold text-lg">c.</span>
+                  <span className="text-gray-300">PII detection/scrubbing</span>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <span className="text-teal-400 font-bold text-lg">d.</span>
+                  <span className="text-gray-300">Access controls, role-based policies</span>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <span className="text-teal-400 font-bold text-lg">e.</span>
+                  <span className="text-gray-300">Strong logging and audit trails to monitor failures</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Footer */}
-      <footer className="absolute bottom-0 left-0 right-0 z-20 p-6 bg-black/20 backdrop-blur-sm border-t border-white/10">
+      <footer className="relative z-30 p-6 bg-black/20 backdrop-blur-sm border-t border-white/10">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-300 mb-4 md:mb-0">
