@@ -23,6 +23,38 @@ export interface AuthResponse {
     };
 }
 
+export interface ChatRequest {
+    message: string;
+}
+
+export interface ChatResponse {
+    response: string;
+    model: string;
+}
+
+export interface ChatSession {
+    id: string;
+    user_id: string;
+    title: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ChatMessage {
+    id: string;
+    session_id: string;
+    user_id: string;
+    message_type: 'user' | 'ai';
+    content: string;
+    created_at: string;
+}
+
+export interface SessionWithMessages {
+    session: ChatSession;
+    messages: ChatMessage[];
+}
+
 class ApiService {
     private baseUrl: string;
 
@@ -83,6 +115,56 @@ class ApiService {
 
     async verifyToken(): Promise<AuthResponse['user']> {
         return this.request<AuthResponse['user']>(API_CONFIG.ENDPOINTS.AUTH.VERIFY);
+    }
+
+    async chatWithGemini(message: ChatRequest): Promise<ChatResponse> {
+        return this.request<ChatResponse>(API_CONFIG.ENDPOINTS.GEMINI.CHAT, {
+            method: 'POST',
+            body: JSON.stringify(message),
+        });
+    }
+
+    async checkGeminiHealth(): Promise<{ status: string; model: string; configured: boolean }> {
+        return this.request<{ status: string; model: string; configured: boolean }>(API_CONFIG.ENDPOINTS.GEMINI.HEALTH);
+    }
+
+    // Chat Session Methods
+    async getChatSessions(): Promise<{ sessions: ChatSession[] }> {
+        return this.request<{ sessions: ChatSession[] }>(API_CONFIG.ENDPOINTS.CHAT.SESSIONS);
+    }
+
+    async createChatSession(title: string): Promise<{ session: ChatSession }> {
+        return this.request<{ session: ChatSession }>(API_CONFIG.ENDPOINTS.CHAT.SESSIONS, {
+            method: 'POST',
+            body: JSON.stringify({ title }),
+        });
+    }
+
+    async getChatSession(sessionId: string): Promise<SessionWithMessages> {
+        return this.request<SessionWithMessages>(`${API_CONFIG.ENDPOINTS.CHAT.SESSIONS}/${sessionId}`);
+    }
+
+    async updateChatSession(sessionId: string, title: string): Promise<{ session: ChatSession }> {
+        return this.request<{ session: ChatSession }>(`${API_CONFIG.ENDPOINTS.CHAT.SESSIONS}/${sessionId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ title }),
+        });
+    }
+
+    async deleteChatSession(sessionId: string): Promise<{ message: string }> {
+        return this.request<{ message: string }>(`${API_CONFIG.ENDPOINTS.CHAT.SESSIONS}/${sessionId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async addMessageToSession(sessionId: string, messageType: 'user' | 'ai', content: string): Promise<{ message: ChatMessage }> {
+        return this.request<{ message: ChatMessage }>(`${API_CONFIG.ENDPOINTS.CHAT.MESSAGES}/${sessionId}/messages`, {
+            method: 'POST',
+            body: JSON.stringify({
+                message_type: messageType,
+                content: content,
+            }),
+        });
     }
 }
 

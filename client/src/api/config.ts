@@ -7,6 +7,15 @@ export const API_CONFIG = {
             LOGOUT: '/api/auth/logout',
             VERIFY: '/api/auth/verify',
         },
+        GEMINI: {
+            CHAT: '/api/gemini/chat',
+            HEALTH: '/api/gemini/health',
+        },
+        CHAT: {
+            SESSIONS: '/api/chat/sessions',
+            SESSION: '/api/chat/sessions',
+            MESSAGES: '/api/chat/sessions',
+        },
     },
 };
 

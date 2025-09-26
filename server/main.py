@@ -12,6 +12,8 @@ from db.config import supabase, supabase_admin, JWT_SECRET_KEY, JWT_ACCESS_TOKEN
 # Import routes
 from routes.auth_routes import auth_bp
 from routes.admin_routes import admin_bp
+from routes.gemini_routes import gemini_bp
+from routes.chat_routes import chat_bp
 
 # Create Flask app
 app = Flask(__name__)
@@ -23,6 +25,8 @@ CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://loc
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(admin_bp, url_prefix='/api/admin')
+app.register_blueprint(gemini_bp, url_prefix='/api/gemini')
+app.register_blueprint(chat_bp, url_prefix='/api/chat')
 
 @app.route('/')
 def health_check():

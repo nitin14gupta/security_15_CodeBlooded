@@ -65,6 +65,37 @@ CREATE INDEX IF NOT EXISTS idx_security_alerts_severity ON security_alerts(sever
 CREATE INDEX IF NOT EXISTS idx_security_alerts_resolved ON security_alerts(resolved);
 CREATE INDEX IF NOT EXISTS idx_security_alerts_created_at ON security_alerts(created_at);
 
+-- Create chat_sessions table for managing chat sessions
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for chat sessions
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_is_active ON chat_sessions(is_active);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_created_at ON chat_sessions(created_at);
+
+-- Create chat_messages table for storing chat messages
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    message_type VARCHAR(20) NOT NULL CHECK (message_type IN ('user', 'ai')),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for chat messages
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_type ON chat_messages(message_type);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+
 -- Insert a default admin user (password: admin123)
 INSERT INTO users (email, name, password_hash, user_type) 
 VALUES (
@@ -86,6 +117,12 @@ $$ language 'plpgsql';
 -- Create trigger to automatically update updated_at
 CREATE TRIGGER update_users_updated_at 
     BEFORE UPDATE ON users 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Create trigger for chat_sessions updated_at
+CREATE TRIGGER update_chat_sessions_updated_at 
+    BEFORE UPDATE ON chat_sessions 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
