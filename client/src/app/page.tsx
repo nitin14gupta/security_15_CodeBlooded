@@ -2,29 +2,67 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-
+import Spline from "@splinetool/react-spline";
 export default function Home() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    
+    // Force Spline to resize to full screen
+    const resizeSpline = () => {
+      const splineElements = document.querySelectorAll('canvas, iframe');
+      splineElements.forEach((element: any) => {
+        if (element) {
+          element.style.width = '100vw';
+          element.style.height = '100vh';
+          element.style.position = 'absolute';
+          element.style.top = '0';
+          element.style.left = '0';
+        }
+      });
+    };
+
+    // Resize immediately and on window resize
+    setTimeout(resizeSpline, 100);
+    window.addEventListener('resize', resizeSpline);
+    
+    return () => window.removeEventListener('resize', resizeSpline);
   }, []);
 
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 relative overflow-hidden">
-      {/* 3D Background Elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full opacity-30 animate-bounce"></div>
-        <div className="absolute bottom-20 left-1/4 w-40 h-40 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full opacity-25 animate-pulse"></div>
-        <div className="absolute bottom-40 right-1/3 w-28 h-28 bg-gradient-to-r from-green-500 to-teal-500 rounded-full opacity-35 animate-bounce"></div>
+    <div className="w-full h-screen relative overflow-hidden">
+      {/* Spline 3D Scene - Full Screen Background */}
+      <div 
+        className="spline-container fixed inset-0 w-screen h-screen"
+        style={{
+          width: '100vw',
+          height: '100vh',
+          top: 0,
+          left: 0,
+          zIndex: 1
+        }}
+      >
+        <Spline
+           scene="https://prod.spline.design/R60TBNU4E4B9D-ND/scene.splinecode"
+           style={{ 
+            width: '100vw', 
+            height: '100vh',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            objectFit: 'cover',
+            transform: 'scale(1)',
+            transformOrigin: 'top left'
+          }}
+        />
       </div>
 
       {/* Header */}
-      <header className="relative z-10 p-6">
+      <header className="absolute top-0 left-0 right-0 z-20 p-6 bg-black/20 backdrop-blur-sm">
         <nav className="flex justify-between items-center">
           <div className="text-2xl font-bold text-white">
             <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
@@ -49,39 +87,9 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6">
-        <div className="text-center max-w-4xl">
-          <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 leading-tight">
-            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
-              Secure
-            </span>
-            <br />
-            <span className="text-white">Your Future</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Advanced security solutions powered by cutting-edge technology.
-            Protect what matters most with our comprehensive security platform.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <button
-              onClick={() => router.push("/register")}
-              className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-lg font-semibold rounded-xl hover:from-pink-600 hover:to-purple-600 transition-all duration-300 shadow-2xl hover:shadow-pink-500/25 transform hover:scale-105"
-            >
-              Get Started
-            </button>
-            <button
-              onClick={() => router.push("/login")}
-              className="px-8 py-4 text-white text-lg font-semibold border-2 border-white/30 rounded-xl hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
-            >
-              Sign In
-            </button>
-          </div>
-        </div>
-      </main>
 
       {/* Footer */}
-      <footer className="relative z-10 p-6 border-t border-white/10">
+      <footer className="absolute bottom-0 left-0 right-0 z-20 p-6 bg-black/20 backdrop-blur-sm border-t border-white/10">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-300 mb-4 md:mb-0">
@@ -97,7 +105,7 @@ export default function Home() {
       </footer>
 
       {/* Floating particles effect */}
-      <div className="absolute inset-0 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none z-10">
         {[...Array(20)].map((_, i) => (
           <div
             key={i}
