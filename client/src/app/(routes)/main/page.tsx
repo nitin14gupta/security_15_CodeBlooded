@@ -37,6 +37,7 @@ export default function CareCompanionPage() {
     const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null)
     const [isListening, setIsListening] = useState(false)
     const [recognition, setRecognition] = useState<any>(null)
+    const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown')
 
     const [sessions, setSessions] = useState<ChatSession[]>([])
     const [currentSession, setCurrentSession] = useState<ChatSession | null>(null)
@@ -80,45 +81,91 @@ export default function CareCompanionPage() {
         }
     }, [isAuthenticated])
 
+    // Check microphone permissions
+    const checkMicrophonePermission = async () => {
+        try {
+            if (navigator.permissions) {
+                const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName })
+                setMicPermission(permission.state)
+
+                permission.onchange = () => {
+                    setMicPermission(permission.state)
+                }
+            } else {
+                setMicPermission('unknown')
+            }
+        } catch (error) {
+            console.log('Permission API not supported, will prompt on first use')
+            setMicPermission('unknown')
+        }
+    }
+
+    // Request microphone permission
+    const requestMicrophonePermission = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            setMicPermission('granted')
+            stream.getTracks().forEach(track => track.stop())
+            return true
+        } catch (error: any) {
+            console.error('Microphone permission denied:', error)
+            setMicPermission('denied')
+            if (error.name === 'NotAllowedError') {
+                showError('Microphone Access Required', 'Please allow microphone access in your browser to use voice input. Click the microphone icon in your address bar and select "Allow".')
+            } else if (error.name === 'NotFoundError') {
+                showError('No Microphone Found', 'No microphone device was found. Please connect a microphone and try again.')
+            } else {
+                showError('Microphone Error', 'Unable to access microphone. Please check your device settings.')
+            }
+            return false
+        }
+    }
+
     // Initialize text-to-speech and speech recognition
     useEffect(() => {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
             setSpeechSynthesis(window.speechSynthesis)
         }
 
+        // Check microphone permissions
+        checkMicrophonePermission()
+
         // Initialize speech recognition
         if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
             const recognitionInstance = new SpeechRecognition()
-            
+
             recognitionInstance.continuous = false
             recognitionInstance.interimResults = false
             recognitionInstance.lang = 'en-US'
-            
+
             recognitionInstance.onstart = () => {
                 setIsListening(true)
             }
-            
+
             recognitionInstance.onresult = (event: any) => {
                 const transcript = event.results[0][0].transcript
                 setInputMessage(prev => prev + (prev ? ' ' : '') + transcript)
                 setIsListening(false)
             }
-            
+
             recognitionInstance.onerror = (event: any) => {
                 console.error('Speech recognition error:', event.error)
                 setIsListening(false)
                 if (event.error === 'not-allowed') {
-                    showError('Microphone Access Denied', 'Please allow microphone access to use speech-to-text')
+                    setMicPermission('denied')
+                    showError('Microphone Access Denied', 'Please allow microphone access to use speech-to-text. Click the microphone icon in your address bar and select "Allow".')
                 } else if (event.error === 'no-speech') {
                     showError('No Speech Detected', 'Please try speaking again')
+                } else if (event.error === 'audio-capture') {
+                    showError('No Microphone Found', 'No microphone device was found. Please connect a microphone and try again.')
                 }
             }
-            
+
             recognitionInstance.onend = () => {
                 setIsListening(false)
             }
-            
+
             setRecognition(recognitionInstance)
         }
     }, [])
@@ -533,7 +580,7 @@ export default function CareCompanionPage() {
     }
 
     // Speech-to-Text functions
-    const startListening = () => {
+    const startListening = async () => {
         if (!recognition) {
             showError('Speech Recognition Not Available', 'Your browser does not support speech recognition')
             return
@@ -542,13 +589,27 @@ export default function CareCompanionPage() {
         if (isListening) {
             recognition.stop()
             setIsListening(false)
-        } else {
-            try {
-                recognition.start()
-            } catch (error) {
-                console.error('Error starting speech recognition:', error)
-                showError('Speech Recognition Error', 'Unable to start speech recognition')
+            return
+        }
+
+        // Check and request microphone permission if needed
+        if (micPermission === 'denied') {
+            showError('Microphone Access Denied', 'Please allow microphone access in your browser settings to use voice input.')
+            return
+        }
+
+        if (micPermission === 'unknown' || micPermission === 'prompt') {
+            const hasPermission = await requestMicrophonePermission()
+            if (!hasPermission) {
+                return
             }
+        }
+
+        try {
+            recognition.start()
+        } catch (error) {
+            console.error('Error starting speech recognition:', error)
+            showError('Speech Recognition Error', 'Unable to start speech recognition')
         }
     }
 
@@ -1065,6 +1126,37 @@ export default function CareCompanionPage() {
                                             rows={1}
                                             style={{ minHeight: '60px', maxHeight: '120px' }}
                                         />
+                                        {/* Speech-to-Text Button */}
+                                        <button
+                                            onClick={startListening}
+                                            className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${isListening
+                                                ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+                                                : micPermission === 'denied'
+                                                    ? 'bg-gray-500 hover:bg-gray-600 text-white cursor-not-allowed'
+                                                    : 'bg-green-500 hover:bg-green-600 text-white'
+                                                }`}
+                                            disabled={micPermission === 'denied'}
+                                            title={
+                                                isListening
+                                                    ? 'Stop recording'
+                                                    : micPermission === 'denied'
+                                                        ? 'Microphone access denied - check browser settings'
+                                                        : micPermission === 'unknown'
+                                                            ? 'Click to request microphone access'
+                                                            : 'Start voice input'
+                                            }
+                                        >
+                                            {isListening ? (
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" />
+                                                    <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5a.75.75 0 001.5 0v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 11-9 0v-.357z" />
+                                                </svg>
+                                            )}
+                                        </button>
                                         {/* Text-to-Speech Button */}
                                         <button
                                             onClick={isSpeaking ? stopSpeaking : speakText}
