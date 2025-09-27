@@ -91,22 +91,18 @@ export default function LoginPage() {
                 <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     {/* Left Content */}
                     <div className="space-y-8">
-                        <h1 className="text-6xl lg:text-7xl font-bold text-white leading-tight">
-                            Your Security, Our Priority
-                        </h1>
+                        <h3 className="text-6xl lg:text-7xl font-bold text-white leading-tight">
+                            Access Your Workspace
+                        </h3>
                         <p className="text-xl text-gray-300 leading-relaxed max-w-2xl">
-                            We take the protection of your data and privacy seriously. This page is dedicated to keeping you informed about the steps we take to ensure a safe and secure experience while using our services.
+                            Access your personalized dashboard and continue where you left off.Your security is our priority — please log in to your account. Enter your credentials to access exclusive features and insights.
                         </p>
                     </div>
 
                     {/* Right Content - Login Form */}
                     <div className="w-full max-w-md">
-                        <div className="text-center mb-8">
-                            <h2 className="text-3xl font-bold text-white mb-2">Welcome Back</h2>
-                            <p className="text-gray-300 text-lg">Sign in to your secure account</p>
-                        </div>
-
                         <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/10">
+                            <h2 className="text-3xl font-bold text-white mb-5">Welcome Back,</h2>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-semibold text-white mb-3">
@@ -171,23 +167,6 @@ export default function LoginPage() {
                     </div>
                 </div>
             </main>
-
-            {/* Footer */}
-            <footer className="absolute bottom-0 left-0 right-0 z-30 p-6 bg-black/30 backdrop-blur-xl border-t border-white/20">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col md:flex-row justify-between items-center">
-                        <div className="text-gray-300 mb-4 md:mb-0">
-                            © 2024 SecurityApp. All rights reserved.
-                        </div>
-                        <div className="flex space-x-8 text-gray-300">
-                            <button onClick={() => router.push('/privacy')} className="hover:text-white transition-colors font-medium hover:scale-105 cursor-pointer">Privacy</button>
-                            <button onClick={() => router.push('/terms')} className="hover:text-white transition-colors font-medium hover:scale-105 cursor-pointer">Terms</button>
-                            <button onClick={() => router.push('/support')} className="hover:text-white transition-colors font-medium hover:scale-105 cursor-pointer">Support</button>
-                            <button onClick={() => router.push('/docs')} className="hover:text-white transition-colors font-medium hover:scale-105 cursor-pointer">Documentation</button>
-                        </div>
-                    </div>
-                </div>
-            </footer>
         </div>
     );
 }

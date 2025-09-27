@@ -91,7 +91,7 @@ export default function Home() {
       </div>
 
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-30 p-6 bg-black/10 backdrop-blur-xl border-b border-white/10">
+      <header className="absolute top-0 left-0 right-0 z-30 p-2 bg-black/10 backdrop-blur-xl border-b border-white/10">
         <nav className="flex justify-between items-center max-w-7xl mx-auto">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center shadow-2xl border border-slate-700/50">
