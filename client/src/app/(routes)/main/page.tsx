@@ -1515,12 +1515,6 @@ export default function CareCompanionPage() {
                                     >
                                         {isGeneratingSummary ? 'Generating...' : 'Generate Collaboration Summary'}
                                     </button>
-                                    <button className="bg-gray-500 hover:bg-black-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
-                                        Explore Community
-                                    </button>
-                                    <button className="bg-gray-500 hover:bg-black-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
-                                        Run Sanitize Tests
-                                    </button>
                                 </div>
                             </div>
                         </div>
