@@ -499,107 +499,160 @@ def _get_mood_recommendations(trend: str, primary_mood: str) -> list:
 def generate_collaboration_summary():
     """Generate AI collaboration summary for a chat session"""
     try:
+        print("Starting collaboration summary generation...")
+        
         user, error_response, status_code = require_auth()
         if error_response:
+            print(f"Authentication failed: {error_response}")
             return error_response, status_code
         
         data = request.get_json()
         if not data or 'session_id' not in data:
+            print("Missing session_id in request")
             return jsonify({'error': 'Session ID is required'}), 400
         
         session_id = data['session_id']
+        print(f"Processing session: {session_id}")
         
         # Verify session belongs to user
         session_result = supabase.table('chat_sessions').select('*').eq('id', session_id).eq('user_id', user['id']).eq('is_active', True).execute()
         
         if not session_result.data:
+            print(f"Session not found or access denied: {session_id}")
             return jsonify({'error': 'Session not found or access denied'}), 404
         
         session = session_result.data[0]
+        print(f"Found session: {session['title']}")
         
         # Get all messages for the session
         messages_result = supabase.table('chat_messages').select('*').eq('session_id', session_id).order('created_at').execute()
         
         if not messages_result.data:
+            print("No messages found in session")
             return jsonify({'error': 'No messages found in this session'}), 400
         
         messages = messages_result.data
+        print(f"Found {len(messages)} messages")
         
         # Check if summary already exists
         existing_summary = supabase.table('collaboration_summaries').select('*').eq('session_id', session_id).execute()
         
         if existing_summary.data:
+            print("Summary already exists for this session")
             return jsonify({
                 'message': 'Summary already exists for this session',
                 'summary': existing_summary.data[0]
             }), 200
         
+        # Check Gemini availability
         if not gemini_model:
-            return jsonify({'error': 'AI service not available'}), 500
-        
-        # Prepare conversation data for Gemini
-        conversation_text = ""
-        mood_data = []
-        
-        for msg in messages:
-            role = "User" if msg['message_type'] == 'user' else "AI Assistant"
-            conversation_text += f"{role}: {msg['content']}\n"
-            
-            if msg['mood']:
-                mood_data.append({
-                    'message': msg['content'][:100] + "..." if len(msg['content']) > 100 else msg['content'],
-                    'mood': msg['mood'],
-                    'timestamp': msg['created_at']
-                })
-        
-        # Create prompt for Gemini
-        prompt = f"""
-        Analyze this therapy/counseling conversation and create a comprehensive collaboration summary:
-
-        CONVERSATION:
-        {conversation_text}
-
-        MOOD DATA:
-        {mood_data}
-
-        Please provide:
-        1. A concise title for this session
-        2. A detailed summary of the conversation
-        3. Key insights about the user's emotional state and needs
-        4. Mood analysis and patterns
-        5. Recommendations for continued support
-
-        Format your response as JSON with these fields:
-        - title: string
-        - summary: string
-        - key_insights: array of strings
-        - mood_analysis: object with mood patterns and trends
-        - recommendations: array of strings
-        """
-        
-        # Generate summary using Gemini
-        response = gemini_model.generate_content(prompt)
-        
-        try:
-            # Parse JSON response
-            import json
-            summary_data = json.loads(response.text)
-        except json.JSONDecodeError:
-            # Fallback if JSON parsing fails
+            print("Gemini model not available - using fallback")
+            # Create a simple fallback summary
             summary_data = {
                 'title': f"Session Summary - {session['title']}",
-                'summary': response.text,
-                'key_insights': ["AI-generated insights from conversation"],
-                'mood_analysis': {"patterns": "Analyzed from conversation"},
-                'recommendations': ["Continue supportive dialogue"]
+                'summary': f"This is a summary of your conversation session '{session['title']}'. The session contained {len(messages)} messages and covered various topics. This summary was generated without AI assistance due to service unavailability.",
+                'key_insights': [
+                    f"Session contained {len(messages)} messages",
+                    "Conversation covered multiple topics",
+                    "User engaged actively in the session"
+                ],
+                'mood_analysis': {"patterns": "Analysis not available due to AI service unavailability"},
+                'recommendations': [
+                    "Continue engaging in supportive conversations",
+                    "Consider scheduling regular check-ins",
+                    "Monitor mood patterns over time"
+                ]
             }
+        else:
+            print("Gemini model available, generating AI summary...")
+            
+            # Prepare conversation data for Gemini
+            conversation_text = ""
+            mood_data = []
+            
+            for msg in messages:
+                role = "User" if msg['message_type'] == 'user' else "AI Assistant"
+                conversation_text += f"{role}: {msg['content']}\n"
+                
+                if msg['mood']:
+                    mood_data.append({
+                        'message': msg['content'][:100] + "..." if len(msg['content']) > 100 else msg['content'],
+                        'mood': msg['mood'],
+                        'timestamp': msg['created_at']
+                    })
+            
+            # Create prompt for Gemini
+            prompt = f"""
+            Analyze this therapy/counseling conversation and create a comprehensive collaboration summary:
+
+            CONVERSATION:
+            {conversation_text}
+
+            MOOD DATA:
+            {mood_data}
+
+            Please provide:
+            1. A concise title for this session
+            2. A detailed summary of the conversation
+            3. Key insights about the user's emotional state and needs
+            4. Mood analysis and patterns
+            5. Recommendations for continued support
+
+            Format your response as JSON with these fields:
+            - title: string
+            - summary: string
+            - key_insights: array of strings
+            - mood_analysis: object with mood patterns and trends
+            - recommendations: array of strings
+            """
+            
+            try:
+                # Generate summary using Gemini
+                print("Calling Gemini API...")
+                response = gemini_model.generate_content(prompt)
+                print(f"Gemini response received: {len(response.text)} characters")
+                
+                try:
+                    # Parse JSON response
+                    import json
+                    summary_data = json.loads(response.text)
+                    print("Successfully parsed JSON response from Gemini")
+                except json.JSONDecodeError as e:
+                    print(f"JSON parsing failed: {e}")
+                    # Fallback if JSON parsing fails
+                    summary_data = {
+                        'title': f"Session Summary - {session['title']}",
+                        'summary': response.text,
+                        'key_insights': ["AI-generated insights from conversation"],
+                        'mood_analysis': {"patterns": "Analyzed from conversation"},
+                        'recommendations': ["Continue supportive dialogue"]
+                    }
+            except Exception as gemini_error:
+                print(f"Gemini API error: {gemini_error}")
+                # Fallback when Gemini fails
+                summary_data = {
+                    'title': f"Session Summary - {session['title']}",
+                    'summary': f"This is a summary of your conversation session '{session['title']}'. The session contained {len(messages)} messages. AI analysis was temporarily unavailable, but the conversation has been recorded for future reference.",
+                    'key_insights': [
+                        f"Session contained {len(messages)} messages",
+                        "Conversation was recorded successfully",
+                        "AI analysis temporarily unavailable"
+                    ],
+                    'mood_analysis': {"patterns": "Analysis temporarily unavailable"},
+                    'recommendations': [
+                        "Continue engaging in supportive conversations",
+                        "Session data has been preserved",
+                        "AI analysis will be available in future sessions"
+                    ]
+                }
         
         # Save summary to database
+        print("Saving summary to database...")
         summary_record = {
             'session_id': session_id,
             'user_id': user['id'],
             'summary_title': summary_data.get('title', f"Session Summary - {session['title']}"),
-            'summary_content': summary_data.get('summary', response.text),
+            'summary_content': summary_data.get('summary', 'Summary content not available'),
             'key_insights': summary_data.get('key_insights', []),
             'mood_analysis': summary_data.get('mood_analysis', {}),
             'recommendations': summary_data.get('recommendations', [])
@@ -608,14 +661,17 @@ def generate_collaboration_summary():
         result = supabase.table('collaboration_summaries').insert(summary_record).execute()
         
         if result.data:
+            print("Summary saved successfully")
             return jsonify({
                 'message': 'Collaboration summary generated successfully',
                 'summary': result.data[0]
             }), 200
         else:
+            print("Failed to save summary to database")
             return jsonify({'error': 'Failed to save summary'}), 500
             
     except Exception as e:
+        print(f"Unexpected error in collaboration summary generation: {str(e)}")
         return jsonify({'error': f'Failed to generate summary: {str(e)}'}), 500
 
 @chat_bp.route('/collaboration-summaries', methods=['GET'])
@@ -831,3 +887,32 @@ def get_daily_timer_total():
         
     except Exception as e:
         return jsonify({'error': f'Failed to get daily total: {str(e)}'}), 500
+
+@chat_bp.route('/ai-service/health', methods=['GET'])
+def check_ai_service_health():
+    """Check if AI services (Gemini) are available"""
+    try:
+        user, error_response, status_code = require_auth()
+        if error_response:
+            return error_response, status_code
+        
+        health_status = {
+            'gemini_available': gemini_model is not None,
+            'gemini_api_key_configured': GEMINI_API_KEY is not None,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        if gemini_model:
+            try:
+                # Test Gemini with a simple request
+                test_response = gemini_model.generate_content("Hello, this is a test. Please respond with 'OK'.")
+                health_status['gemini_test_successful'] = True
+                health_status['gemini_response_length'] = len(test_response.text)
+            except Exception as e:
+                health_status['gemini_test_successful'] = False
+                health_status['gemini_error'] = str(e)
+        
+        return jsonify(health_status), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to check AI service health: {str(e)}'}), 500

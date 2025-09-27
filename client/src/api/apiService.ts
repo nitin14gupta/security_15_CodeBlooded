@@ -334,7 +334,7 @@ class ApiService {
     // Collaboration Summary methods
     async generateCollaborationSummary(sessionId: string): Promise<CollaborationSummaryResponse> {
         console.log('Generating collaboration summary for session:', sessionId);
-        return this.request<CollaborationSummaryResponse>('/chat/generate-collaboration-summary', {
+        return this.request<CollaborationSummaryResponse>('/api/chat/generate-collaboration-summary', {
             method: 'POST',
             body: JSON.stringify({ session_id: sessionId })
         });
@@ -342,18 +342,18 @@ class ApiService {
 
     async getCollaborationSummaries(): Promise<CollaborationSummariesResponse> {
         console.log('Getting collaboration summaries');
-        return this.request<CollaborationSummariesResponse>('/chat/collaboration-summaries');
+        return this.request<CollaborationSummariesResponse>('/api/chat/collaboration-summaries');
     }
 
     async getCollaborationSummary(summaryId: string): Promise<CollaborationSummaryResponse> {
         console.log('Getting collaboration summary:', summaryId);
-        return this.request<CollaborationSummaryResponse>(`/chat/collaboration-summary/${summaryId}`);
+        return this.request<CollaborationSummaryResponse>(`/api/chat/collaboration-summary/${summaryId}`);
     }
 
     // Session Timer methods
     async startSessionTimer(sessionId: string): Promise<TimerResponse> {
         console.log('Starting session timer for:', sessionId);
-        return this.request<TimerResponse>('/chat/session-timer/start', {
+        return this.request<TimerResponse>('/api/chat/session-timer/start', {
             method: 'POST',
             body: JSON.stringify({ session_id: sessionId })
         });
@@ -361,7 +361,7 @@ class ApiService {
 
     async stopSessionTimer(sessionId: string): Promise<TimerResponse> {
         console.log('Stopping session timer for:', sessionId);
-        return this.request<TimerResponse>('/chat/session-timer/stop', {
+        return this.request<TimerResponse>('/api/chat/session-timer/stop', {
             method: 'POST',
             body: JSON.stringify({ session_id: sessionId })
         });
@@ -369,12 +369,12 @@ class ApiService {
 
     async getSessionTimer(sessionId: string): Promise<{ timer: SessionTimer | null }> {
         console.log('Getting session timer for:', sessionId);
-        return this.request<{ timer: SessionTimer | null }>(`/chat/session-timer/${sessionId}`);
+        return this.request<{ timer: SessionTimer | null }>(`/api/chat/session-timer/${sessionId}`);
     }
 
     async getDailyTimerTotal(): Promise<DailyTimerTotal> {
         console.log('Getting daily timer total');
-        return this.request<DailyTimerTotal>('/chat/session-timer/daily-total');
+        return this.request<DailyTimerTotal>('/api/chat/session-timer/daily-total');
     }
 }
 
