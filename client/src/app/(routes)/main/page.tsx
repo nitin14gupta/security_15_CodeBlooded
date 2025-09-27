@@ -150,7 +150,7 @@ export default function CareCompanionPage() {
     const updateDailySessionTime = (additionalMinutes: number) => {
         try {
             const today = new Date().toDateString()
-            const newTotal = dailySessionTime + additionalMinutes
+            const newTotal = dailySessionTime + (additionalMinutes * 60) // Convert minutes to seconds
             setDailySessionTime(newTotal)
             localStorage.setItem(`dailySessionTime_${today}`, newTotal.toString())
         } catch (err) {
