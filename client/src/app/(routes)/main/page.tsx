@@ -348,19 +348,38 @@ export default function CareCompanionPage() {
         }
 
         const userMessage: LocalChatMessage = {
-            id: Date.now().toString(),
+            id: `user_${Date.now()}`,
             type: 'user',
             message: inputMessage.trim(),
             timestamp: new Date(),
         }
 
-        setMessages(prev => [...prev, userMessage])
-        setInputMessage('')
+        setMessages(prev => {
+            console.log('Adding user message immediately:', userMessage)
+            console.log('Current messages count:', prev.length)
+            return [...prev, userMessage]
+        })
+        setInputMessage('') // Clear input immediately
         setIsTyping(true)
 
         try {
             // Use the new enhanced message processing with mood analysis
             const response = await apiService.processUserMessage(sessionId, inputMessage.trim())
+
+            // Update user message if PII was scrubbed
+            if (response.processing_results.pii_scrubbed) {
+                console.log('🔒 PII Scrubbing Debug:')
+                console.log('Original message:', inputMessage.trim())
+                console.log('Processed message:', response.processing_results.processed_message)
+                console.log('PII scrubbed:', response.processing_results.pii_scrubbed)
+
+                // Update the user message with scrubbed content
+                setMessages(prev => prev.map(msg =>
+                    msg.id === userMessage.id
+                        ? { ...msg, message: response.processing_results.processed_message }
+                        : msg
+                ))
+            }
 
             // Convert response to local format
             const aiMessage: LocalChatMessage = {
@@ -403,6 +422,11 @@ export default function CareCompanionPage() {
             if (processingResults.warnings && processingResults.warnings.length > 0) {
                 const warningMessages = processingResults.warnings.join(', ')
                 showError('Content Warning', `Your message contains: ${warningMessages}. Please be mindful of the content you share.`)
+            }
+
+            // Show PII scrubbing notification
+            if (processingResults.pii_scrubbed) {
+                showSuccess('Privacy Protection', 'Your message contained personal information that has been automatically protected. The sensitive data has been replaced with [REDACTED] for your privacy.')
             }
 
         } catch (err: any) {
@@ -477,19 +501,39 @@ export default function CareCompanionPage() {
             }
         }
 
+        // Add user message immediately to show in chat
         const userMessage: LocalChatMessage = {
-            id: Date.now().toString(),
+            id: `user_${Date.now()}`,
             type: 'user',
             message: suggestion,
             timestamp: new Date(),
         }
 
-        setMessages(prev => [...prev, userMessage])
+        setMessages(prev => {
+            console.log('Adding user message immediately (Redirect):', userMessage)
+            console.log('Current messages count:', prev.length)
+            return [...prev, userMessage]
+        })
         setIsTyping(true)
 
         try {
             // Use the new enhanced message processing with mood analysis
             const response = await apiService.processUserMessage(sessionId, suggestion)
+
+            // Update user message if PII was scrubbed
+            if (response.processing_results.pii_scrubbed) {
+                console.log('🔒 PII Scrubbing Debug (Redirect):')
+                console.log('Original message:', suggestion)
+                console.log('Processed message:', response.processing_results.processed_message)
+                console.log('PII scrubbed:', response.processing_results.pii_scrubbed)
+
+                // Update the user message with scrubbed content
+                setMessages(prev => prev.map(msg =>
+                    msg.id === userMessage.id
+                        ? { ...msg, message: response.processing_results.processed_message }
+                        : msg
+                ))
+            }
 
             // Convert response to local format
             const aiMessage: LocalChatMessage = {
@@ -532,6 +576,11 @@ export default function CareCompanionPage() {
             if (processingResults.warnings && processingResults.warnings.length > 0) {
                 const warningMessages = processingResults.warnings.join(', ')
                 showError('Content Warning', `Your message contains: ${warningMessages}. Please be mindful of the content you share.`)
+            }
+
+            // Show PII scrubbing notification
+            if (processingResults.pii_scrubbed) {
+                showSuccess('Privacy Protection', 'Your message contained personal information that has been automatically protected. The sensitive data has been replaced with [REDACTED] for your privacy.')
             }
 
         } catch (err: any) {
@@ -802,7 +851,7 @@ export default function CareCompanionPage() {
                         {/* Left Column - Main Interaction Area */}
                         <div className="lg:col-span-2 space-y-6">
                             {/* AI Companion Chat Area */}
-                            <div className="bg-black/30 backdrop-blur-lg rounded-xl p-6 space-y-4 border border-gray-700/50">
+                            <div className="bg-gray-900 backdrop-blur-lg rounded-xl p-6 space-y-4 border border-gray-700/50">
                                 {/* CareCompanion Profile */}
                                 <div className="flex items-center space-x-4">
                                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -849,6 +898,7 @@ export default function CareCompanionPage() {
 
                                 {/* Chat Messages */}
                                 <div className="space-y-4 max-h-96 overflow-y-auto">
+                                    {(() => { console.log('Messages array:', messages); return null; })()}
                                     {messages.length === 0 ? (
                                         <div className="text-center text-gray-300 py-8">
                                             <div className="text-4xl mb-4">🤖</div>
@@ -968,7 +1018,7 @@ export default function CareCompanionPage() {
                         {/* Right Column - Informational Cards */}
                         <div className="space-y-4">
                             {/* Session Today Stats */}
-                            <div className="bg-black/30 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
+                            <div className="bg-gray-900 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
                                 <h3 className="text-white font-semibold">Session Today</h3>
                                 <div className="text-2xl font-bold text-white">
                                     {sessions.length} sessions • {formatTime(dailySessionTime)} today
@@ -979,7 +1029,7 @@ export default function CareCompanionPage() {
                             </div>
 
                             {/* Adaptive Emotional Intelligence Card */}
-                            <div className="bg-black/30 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
+                            <div className="bg-gray-900 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
                                 <h3 className="text-white font-semibold">Adaptive Emotional Intelligence</h3>
                                 <p className="text-gray-300 text-sm">
                                     We detect mood trends and personalize coping strategies.
@@ -1013,7 +1063,7 @@ export default function CareCompanionPage() {
                             </div>
 
                             {/* Community Card */}
-                            <div className="bg-black/30 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
+                            {/* <div className="bg-gray-900 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
                                 <h3 className="text-white font-semibold">Community (Opt-in)</h3>
                                 <p className="text-gray-300 text-sm">
                                     Join moderated peer groups — AI + human moderation ensures safety.
@@ -1024,10 +1074,10 @@ export default function CareCompanionPage() {
                                 <button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200">
                                     Create a new safe circle
                                 </button>
-                            </div>
+                            </div> */}
 
                             {/* Session Health Card */}
-                            <div className="bg-black/30 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
+                            <div className="bg-gray-900 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
                                 <h3 className="text-white font-semibold">Session Health</h3>
                                 <div className="space-y-2">
                                     <div className="text-gray-300 text-sm">Active time today</div>
@@ -1037,7 +1087,7 @@ export default function CareCompanionPage() {
                             </div>
 
                             {/* Safety & Privacy Card */}
-                            <div className="bg-black/30 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
+                            <div className="bg-gray-900 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
                                 <h3 className="text-white font-semibold">Safety & Privacy</h3>
                                 <p className="text-gray-300 text-sm">
                                     On-device memory controls • PII scrubber • Human review opt-in

@@ -257,17 +257,20 @@ def process_user_message(session_id):
             user_message, user['id'], session_id, user_preferences
         )
         
-        # Store user message with mood analysis
+        # Store user message with mood analysis (use processed_message if PII was scrubbed)
+        stored_content = processing_results.get('processed_message', user_message)
         user_message_data = {
             'session_id': session_id,
             'user_id': user['id'],
             'message_type': 'user',
-            'content': user_message,
+            'content': stored_content,
             'mood': processing_results.get('mood_analysis', {}).get('mood', 'neutral'),
             'response_type': 'normal',
             'context_data': {
                 'mood_analysis': processing_results.get('mood_analysis'),
-                'processing_log': processing_results.get('processing_log', [])
+                'processing_log': processing_results.get('processing_log', []),
+                'pii_scrubbed': processing_results.get('pii_scrubbed', False),
+                'original_message': user_message if processing_results.get('pii_scrubbed', False) else None
             }
         }
         
@@ -312,7 +315,9 @@ def process_user_message(session_id):
                 'should_redirect': processing_results.get('should_redirect'),
                 'redirect_suggestions': processing_results.get('redirect_suggestions'),
                 'context_summary': processing_results.get('context_summary'),
-                'warnings': processing_results.get('warnings', [])
+                'warnings': processing_results.get('warnings', []),
+                'pii_scrubbed': processing_results.get('pii_scrubbed', False),
+                'processed_message': processing_results.get('processed_message', user_message)
             }
         }), 200
         

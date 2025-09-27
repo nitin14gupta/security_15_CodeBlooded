@@ -95,6 +95,8 @@ export interface ProcessingResults {
     redirect_suggestions: string[];
     context_summary: any;
     warnings: string[];
+    pii_scrubbed: boolean;
+    processed_message: string;
 }
 
 export interface EnhancedChatResponse {

@@ -110,16 +110,22 @@ class PIIGuard:
             if "error" in detection_results:
                 return text, detection_results
             
-            # Configure anonymization
+            # Configure anonymization - use proper Presidio operator format
+            from presidio_anonymizer.entities import OperatorConfig
             operators = {
-                "DEFAULT": {"type": "replace", "new_value": "[REDACTED]"},
-                "EMAIL": {"type": "replace", "new_value": "[EMAIL_REDACTED]"},
-                "PHONE_NUMBER": {"type": "replace", "new_value": "[PHONE_REDACTED]"},
-                "PERSON": {"type": "replace", "new_value": "[NAME_REDACTED]"},
-                "LOCATION": {"type": "replace", "new_value": "[LOCATION_REDACTED]"},
-                "CREDIT_CARD": {"type": "replace", "new_value": "[CARD_REDACTED]"},
-                "SSN": {"type": "replace", "new_value": "[SSN_REDACTED]"},
-                "IP_ADDRESS": {"type": "replace", "new_value": "[IP_REDACTED]"}
+                "DEFAULT": OperatorConfig("replace", {"new_value": "[REDACTED]"}),
+                "EMAIL": OperatorConfig("replace", {"new_value": "[EMAIL_REDACTED]"}),
+                "EMAIL_ADDRESS": OperatorConfig("replace", {"new_value": "[EMAIL_REDACTED]"}),
+                "PHONE_NUMBER": OperatorConfig("replace", {"new_value": "[PHONE_REDACTED]"}),
+                "PHONE": OperatorConfig("replace", {"new_value": "[PHONE_REDACTED]"}),
+                "PERSON": OperatorConfig("replace", {"new_value": "[NAME_REDACTED]"}),
+                "LOCATION": OperatorConfig("replace", {"new_value": "[LOCATION_REDACTED]"}),
+                "CREDIT_CARD": OperatorConfig("replace", {"new_value": "[CARD_REDACTED]"}),
+                "SSN": OperatorConfig("replace", {"new_value": "[SSN_REDACTED]"}),
+                "IP_ADDRESS": OperatorConfig("replace", {"new_value": "[IP_REDACTED]"}),
+                "US_BANK_NUMBER": OperatorConfig("replace", {"new_value": "[BANK_REDACTED]"}),
+                "US_DRIVER_LICENSE": OperatorConfig("replace", {"new_value": "[LICENSE_REDACTED]"}),
+                "URL": OperatorConfig("replace", {"new_value": "[URL_REDACTED]"})
             }
             
             presidio_results = []
@@ -129,7 +135,8 @@ class PIIGuard:
                     entity_type=entity['entity_type'],
                     start=entity['start'],
                     end=entity['end'],
-                    score=entity['score']
+                    score=entity['score'],
+                    analysis_explanation=None
                 ))
             
             anonymized_result = self.anonymizer.anonymize(
