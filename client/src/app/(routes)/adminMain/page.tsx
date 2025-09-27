@@ -107,22 +107,6 @@ export default function AdminDashboard() {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Top Header */}
-                {/* <header className="bg-black/10 backdrop-blur-lg border-b border-white/10 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-white capitalize">
-                            {activeTab === 'dashboard' ? 'Dashboard Overview' :
-                                activeTab === 'users' ? 'User Management' :
-                                    activeTab === 'security' ? 'Security Alerts' :
-                                        activeTab === 'analytics' ? 'Message Analytics' :
-                                            activeTab === 'audit' ? 'Audit & Logging' :
-                                                activeTab === 'system' ? 'System Monitoring' : 'Admin Panel'}
-                        </h2>
-                        <div className="text-sm text-gray-300">
-                            {new Date().toLocaleDateString()} • {new Date().toLocaleTimeString()}
-                        </div>
-                    </div>
-                </header> */}
 
                 {/* Content */}
                 <main className="flex-1 overflow-auto p-6">

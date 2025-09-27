@@ -311,7 +311,8 @@ def process_user_message(session_id):
                 'response_guidance': processing_results.get('response_guidance'),
                 'should_redirect': processing_results.get('should_redirect'),
                 'redirect_suggestions': processing_results.get('redirect_suggestions'),
-                'context_summary': processing_results.get('context_summary')
+                'context_summary': processing_results.get('context_summary'),
+                'warnings': processing_results.get('warnings', [])
             }
         }), 200
         

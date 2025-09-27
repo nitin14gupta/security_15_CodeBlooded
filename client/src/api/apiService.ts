@@ -94,6 +94,7 @@ export interface ProcessingResults {
     should_redirect: boolean;
     redirect_suggestions: string[];
     context_summary: any;
+    warnings: string[];
 }
 
 export interface EnhancedChatResponse {

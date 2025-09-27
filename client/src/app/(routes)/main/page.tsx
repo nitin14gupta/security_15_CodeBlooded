@@ -399,6 +399,12 @@ export default function CareCompanionPage() {
                 showSuccess('I\'m here to help you learn! Let me provide some educational context.')
             }
 
+            // Show warnings for restricted/toxic content detection
+            if (processingResults.warnings && processingResults.warnings.length > 0) {
+                const warningMessages = processingResults.warnings.join(', ')
+                showError('Content Warning', `Your message contains: ${warningMessages}. Please be mindful of the content you share.`)
+            }
+
         } catch (err: any) {
             // Handle guardrail errors specifically
             if (err.message && err.message.includes('warnings')) {
@@ -520,6 +526,12 @@ export default function CareCompanionPage() {
             // Show educational response notification if applicable
             if (processingResults.mood_analysis?.mood === 'curious' && processingResults.response_guidance?.approach === 'educational') {
                 showSuccess('I\'m here to help you learn! Let me provide some educational context.')
+            }
+
+            // Show warnings for restricted/toxic content detection
+            if (processingResults.warnings && processingResults.warnings.length > 0) {
+                const warningMessages = processingResults.warnings.join(', ')
+                showError('Content Warning', `Your message contains: ${warningMessages}. Please be mindful of the content you share.`)
             }
 
         } catch (err: any) {
