@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Spline from "@splinetool/react-spline";
 import { useOnboarding } from "@/context/onboardingContext";
-import Link from "next/link";
 
 export default function Home() {
   const router = useRouter();
@@ -101,11 +100,9 @@ export default function Home() {
               </svg>
             </div>
             <div className="text-3xl font-bold">
-              <Link href="/">
-                <span className="bg-gradient-to-r from-slate-100 via-white to-slate-200 bg-clip-text text-transparent tracking-tight">
-                  CareCompanion
-                </span>
-              </Link>
+              <span className="bg-gradient-to-r from-slate-100 via-white to-slate-200 bg-clip-text text-transparent tracking-tight">
+                CareCompanion
+              </span>
             </div>
           </div>
           <div className="flex items-center space-x-4">
