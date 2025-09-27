@@ -95,7 +95,7 @@ export default function LoginPage() {
                         <p className="text-gray-300">
                             Don't have an account?{' '}
                             <Link
-                                href="/register"
+                                href="/onboarding"
                                 className="text-teal-400 hover:text-teal-300 font-medium transition-colors cursor-pointer"
                             >
                                 Sign up here
