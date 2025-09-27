@@ -217,7 +217,7 @@ export default function AuditTab({ onError, onSuccess }: AuditTabProps) {
                             <tbody>
                                 {auditLogs.map((log) => (
                                     <tr key={log.id} className="border-b border-gray-700/30">
-                                        <td className="py-3 px-4 text-sm">{log.user_id.substring(0, 8)}...</td>
+
                                         <td className="py-3 px-4">
                                             <span className="px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-300">
                                                 {log.action}

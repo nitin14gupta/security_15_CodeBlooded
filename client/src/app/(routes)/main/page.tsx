@@ -21,46 +21,42 @@ export default function CareCompanionPage() {
     const { showSuccess, showError } = useToast()
     const router = useRouter()
 
-    // Sidebar state
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
-    // Original CareCompanion state
     const [inputValue, setInputValue] = useState('')
-    const [sessionTime, setSessionTime] = useState(0) // in seconds
+    const [sessionTime, setSessionTime] = useState(0)
     const [isTimerRunning, setIsTimerRunning] = useState(false)
-    const [dailySessionTime, setDailySessionTime] = useState(0) // in seconds
+    const [dailySessionTime, setDailySessionTime] = useState(0)
     const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
     const [currentSessionTimer, setCurrentSessionTimer] = useState<SessionTimer | null>(null)
 
-    // Chat state - managing the conversation
     const [messages, setMessages] = useState<LocalChatMessage[]>([])
     const [inputMessage, setInputMessage] = useState('')
     const [isTyping, setIsTyping] = useState(false)
+    const [isSpeaking, setIsSpeaking] = useState(false)
+    const [speechSynthesis, setSpeechSynthesis] = useState<SpeechSynthesis | null>(null)
+    const [isListening, setIsListening] = useState(false)
+    const [recognition, setRecognition] = useState<any>(null)
 
-    // Session state - for managing chat sessions
     const [sessions, setSessions] = useState<ChatSession[]>([])
     const [currentSession, setCurrentSession] = useState<ChatSession | null>(null)
     const [showNewSessionModal, setShowNewSessionModal] = useState(false)
     const [newSessionTitle, setNewSessionTitle] = useState('')
 
-    // Mood and context state
     const [currentMood, setCurrentMood] = useState<'neutral' | 'happy' | 'sad' | 'curious' | 'supportive'>('neutral')
     const [moodHistory, setMoodHistory] = useState<Array<{ mood: string, timestamp: string }>>([])
     const [conversationContext, setConversationContext] = useState<ConversationContext | null>(null)
     const [shouldRedirect, setShouldRedirect] = useState(false)
     const [redirectSuggestions, setRedirectSuggestions] = useState<string[]>([])
 
-    // Analytics state
     const [showAnalytics, setShowAnalytics] = useState(false)
     const [analyticsData, setAnalyticsData] = useState<Array<{ message: number, mood: string, moodValue: number, timestamp: string }>>([])
 
-    // Collaboration Summary state
     const [showCollaborationSummary, setShowCollaborationSummary] = useState(false)
     const [collaborationSummaries, setCollaborationSummaries] = useState<CollaborationSummary[]>([])
     const [selectedSummary, setSelectedSummary] = useState<CollaborationSummary | null>(null)
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
 
-    // Auth and session management
     useEffect(() => {
         if (!loading && !isAuthenticated) {
             console.log('User not authenticated, redirecting to home')
@@ -75,7 +71,6 @@ export default function CareCompanionPage() {
         }
     }, [user, router])
 
-    // Load sessions on mount
     useEffect(() => {
         if (isAuthenticated) {
             console.log('User authenticated, loading sessions...')
@@ -84,6 +79,49 @@ export default function CareCompanionPage() {
             loadCollaborationSummaries()
         }
     }, [isAuthenticated])
+
+    // Initialize text-to-speech and speech recognition
+    useEffect(() => {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            setSpeechSynthesis(window.speechSynthesis)
+        }
+
+        // Initialize speech recognition
+        if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+            const recognitionInstance = new SpeechRecognition()
+            
+            recognitionInstance.continuous = false
+            recognitionInstance.interimResults = false
+            recognitionInstance.lang = 'en-US'
+            
+            recognitionInstance.onstart = () => {
+                setIsListening(true)
+            }
+            
+            recognitionInstance.onresult = (event: any) => {
+                const transcript = event.results[0][0].transcript
+                setInputMessage(prev => prev + (prev ? ' ' : '') + transcript)
+                setIsListening(false)
+            }
+            
+            recognitionInstance.onerror = (event: any) => {
+                console.error('Speech recognition error:', event.error)
+                setIsListening(false)
+                if (event.error === 'not-allowed') {
+                    showError('Microphone Access Denied', 'Please allow microphone access to use speech-to-text')
+                } else if (event.error === 'no-speech') {
+                    showError('No Speech Detected', 'Please try speaking again')
+                }
+            }
+            
+            recognitionInstance.onend = () => {
+                setIsListening(false)
+            }
+            
+            setRecognition(recognitionInstance)
+        }
+    }, [])
 
     // Auto-increment timer every second when running
     useEffect(() => {
@@ -359,21 +397,18 @@ export default function CareCompanionPage() {
             console.log('Current messages count:', prev.length)
             return [...prev, userMessage]
         })
-        setInputMessage('') // Clear input immediately
+        setInputMessage('')
         setIsTyping(true)
 
         try {
-            // Use the new enhanced message processing with mood analysis
             const response = await apiService.processUserMessage(sessionId, inputMessage.trim())
 
-            // Update user message if PII was scrubbed
             if (response.processing_results.pii_scrubbed) {
                 console.log('🔒 PII Scrubbing Debug:')
                 console.log('Original message:', inputMessage.trim())
                 console.log('Processed message:', response.processing_results.processed_message)
                 console.log('PII scrubbed:', response.processing_results.pii_scrubbed)
 
-                // Update the user message with scrubbed content
                 setMessages(prev => prev.map(msg =>
                     msg.id === userMessage.id
                         ? { ...msg, message: response.processing_results.processed_message }
@@ -381,7 +416,6 @@ export default function CareCompanionPage() {
                 ))
             }
 
-            // Convert response to local format
             const aiMessage: LocalChatMessage = {
                 id: response.ai_response.id,
                 type: response.ai_response.message_type,
@@ -393,7 +427,6 @@ export default function CareCompanionPage() {
 
             setMessages(prev => [...prev, aiMessage])
 
-            // Update mood and context from processing results
             const processingResults = response.processing_results
             if (processingResults.mood_analysis) {
                 setCurrentMood(processingResults.mood_analysis.mood)
@@ -403,7 +436,6 @@ export default function CareCompanionPage() {
                 }])
             }
 
-            // Handle redirect suggestions
             if (processingResults.should_redirect && processingResults.redirect_suggestions.length > 0) {
                 setShouldRedirect(true)
                 setRedirectSuggestions(processingResults.redirect_suggestions)
@@ -413,24 +445,20 @@ export default function CareCompanionPage() {
                 setRedirectSuggestions([])
             }
 
-            // Show educational response notification if applicable
             if (processingResults.mood_analysis?.mood === 'curious' && processingResults.response_guidance?.approach === 'educational') {
                 showSuccess('I\'m here to help you learn! Let me provide some educational context.')
             }
 
-            // Show warnings for restricted/toxic content detection
             if (processingResults.warnings && processingResults.warnings.length > 0) {
                 const warningMessages = processingResults.warnings.join(', ')
                 showError('Content Warning', `Your message contains: ${warningMessages}. Please be mindful of the content you share.`)
             }
 
-            // Show PII scrubbing notification
             if (processingResults.pii_scrubbed) {
                 showSuccess('Privacy Protection', 'Your message contained personal information that has been automatically protected. The sensitive data has been replaced with [REDACTED] for your privacy.')
             }
 
         } catch (err: any) {
-            // Handle guardrail errors specifically
             if (err.message && err.message.includes('warnings')) {
                 try {
                     const errorData = JSON.parse(err.message)
@@ -455,6 +483,79 @@ export default function CareCompanionPage() {
         if (inputValue.trim()) {
             console.log('Sending message:', inputValue)
             setInputValue('')
+        }
+    }
+
+    // Text-to-Speech functions
+    const speakText = () => {
+        if (!speechSynthesis || !inputMessage.trim()) return
+
+        // Stop any current speech
+        speechSynthesis.cancel()
+
+        const utterance = new SpeechSynthesisUtterance(inputMessage.trim())
+
+        // Configure voice settings for better quality
+        utterance.rate = 0.9 // Slightly slower for better comprehension
+        utterance.pitch = 1.0 // Normal pitch
+        utterance.volume = 0.8 // Good volume level
+
+        // Try to use a high-quality voice if available
+        const voices = speechSynthesis.getVoices()
+        const preferredVoices = [
+            'Microsoft Zira Desktop - English (United States)',
+            'Microsoft David Desktop - English (United States)',
+            'Google US English',
+            'Alex',
+            'Samantha'
+        ]
+
+        const selectedVoice = voices.find(voice =>
+            preferredVoices.includes(voice.name)
+        ) || voices.find(voice => voice.lang.startsWith('en'))
+
+        if (selectedVoice) {
+            utterance.voice = selectedVoice
+        }
+
+        utterance.onstart = () => setIsSpeaking(true)
+        utterance.onend = () => setIsSpeaking(false)
+        utterance.onerror = () => setIsSpeaking(false)
+
+        speechSynthesis.speak(utterance)
+    }
+
+    const stopSpeaking = () => {
+        if (speechSynthesis) {
+            speechSynthesis.cancel()
+            setIsSpeaking(false)
+        }
+    }
+
+    // Speech-to-Text functions
+    const startListening = () => {
+        if (!recognition) {
+            showError('Speech Recognition Not Available', 'Your browser does not support speech recognition')
+            return
+        }
+
+        if (isListening) {
+            recognition.stop()
+            setIsListening(false)
+        } else {
+            try {
+                recognition.start()
+            } catch (error) {
+                console.error('Error starting speech recognition:', error)
+                showError('Speech Recognition Error', 'Unable to start speech recognition')
+            }
+        }
+    }
+
+    const stopListening = () => {
+        if (recognition && isListening) {
+            recognition.stop()
+            setIsListening(false)
         }
     }
 
@@ -651,10 +752,8 @@ export default function CareCompanionPage() {
             const response = await apiService.generateCollaborationSummary(currentSession.id)
             showSuccess('Collaboration summary generated successfully!')
 
-            // Load updated summaries
             await loadCollaborationSummaries()
 
-            // Show the summary modal
             setSelectedSummary(response.summary)
             setShowCollaborationSummary(true)
         } catch (err: any) {
@@ -685,7 +784,6 @@ export default function CareCompanionPage() {
         setShowCollaborationSummary(true)
     }
 
-    // Helper function to format time with seconds
     const formatTime = (seconds: number) => {
         const hours = Math.floor(seconds / 3600)
         const minutes = Math.floor((seconds % 3600) / 60)
@@ -714,7 +812,6 @@ export default function CareCompanionPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex">
-            {/* Sidebar */}
             <div className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 bg-black/40 backdrop-blur-lg border-r border-gray-700/50 flex flex-col`}>
                 <div className="p-4 border-b border-gray-700/50">
                     <div className="flex items-center justify-between">
@@ -968,6 +1065,26 @@ export default function CareCompanionPage() {
                                             rows={1}
                                             style={{ minHeight: '60px', maxHeight: '120px' }}
                                         />
+                                        {/* Text-to-Speech Button */}
+                                        <button
+                                            onClick={isSpeaking ? stopSpeaking : speakText}
+                                            disabled={!inputMessage.trim()}
+                                            className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${isSpeaking
+                                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                                : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                                }`}
+                                            title={isSpeaking ? 'Stop speaking' : 'Listen to your message'}
+                                        >
+                                            {isSpeaking ? (
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.816L4.383 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.383l4-3.816a1 1 0 011-.108zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                        </button>
                                         <button
                                             onClick={sendMessage}
                                             disabled={!inputMessage.trim() || isTyping}
