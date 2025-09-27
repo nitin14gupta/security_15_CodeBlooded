@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { apiService, ChatSession, ChatMessage, EnhancedChatResponse, MoodAnalysis, ConversationContext } from '@/api/apiService'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface LocalChatMessage {
     id: string;
@@ -45,6 +46,10 @@ export default function CareCompanionPage() {
     const [conversationContext, setConversationContext] = useState<ConversationContext | null>(null)
     const [shouldRedirect, setShouldRedirect] = useState(false)
     const [redirectSuggestions, setRedirectSuggestions] = useState<string[]>([])
+
+    // Analytics state
+    const [showAnalytics, setShowAnalytics] = useState(false)
+    const [analyticsData, setAnalyticsData] = useState<Array<{ message: number, mood: string, moodValue: number, timestamp: string }>>([])
 
     // Auth and session management
     useEffect(() => {
@@ -403,6 +408,39 @@ export default function CareCompanionPage() {
         }
     }
 
+    // Analytics functions
+    const generateAnalyticsData = () => {
+        if (!currentSession || messages.length === 0) return
+
+        const moodValueMap = {
+            'sad': 0,
+            'curious': 1,
+            'neutral': 2,
+            'supportive': 3,
+            'happy': 4
+        }
+
+        const analyticsData = messages
+            .filter(msg => msg.mood) // Only messages with mood data
+            .map((msg, index) => ({
+                message: index + 1,
+                mood: msg.mood!,
+                moodValue: moodValueMap[msg.mood as keyof typeof moodValueMap] || 2,
+                timestamp: msg.timestamp.toLocaleTimeString()
+            }))
+
+        setAnalyticsData(analyticsData)
+    }
+
+    const openAnalytics = () => {
+        if (!currentSession) {
+            showError('No active session', 'Please start a chat session first')
+            return
+        }
+        generateAnalyticsData()
+        setShowAnalytics(true)
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
@@ -721,7 +759,7 @@ export default function CareCompanionPage() {
                                     )}
                                 </div>
                                 <button
-                                    onClick={() => currentSession && loadConversationContext(currentSession.id)}
+                                    onClick={openAnalytics}
                                     className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200"
                                 >
                                     View Insights
@@ -802,6 +840,150 @@ export default function CareCompanionPage() {
                                 Cancel
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Analytics Modal */}
+            {showAnalytics && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-black/60 backdrop-blur-lg rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-700/50">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-semibold text-white">📊 Mood Analytics</h3>
+                            <button
+                                onClick={() => setShowAnalytics(false)}
+                                className="text-gray-400 hover:text-white text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {analyticsData.length === 0 ? (
+                            <div className="text-center py-12">
+                                <div className="text-6xl mb-4">📈</div>
+                                <h4 className="text-xl font-semibold text-white mb-2">No Mood Data Available</h4>
+                                <p className="text-gray-300">Start chatting to see your mood journey visualized!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {/* Chart */}
+                                <div className="bg-black/30 rounded-xl p-6 border border-gray-700/30">
+                                    <h4 className="text-lg font-semibold text-white mb-4">User Mood Over Chat</h4>
+                                    <div className="h-80">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={analyticsData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                                <XAxis
+                                                    dataKey="message"
+                                                    stroke="#9CA3AF"
+                                                    fontSize={12}
+                                                    tickFormatter={(value) => `Msg ${value}`}
+                                                />
+                                                <YAxis
+                                                    stroke="#9CA3AF"
+                                                    fontSize={12}
+                                                    domain={[0, 4]}
+                                                    tickCount={5}
+                                                    tickFormatter={(value) => {
+                                                        const moodLabels = ['Sad', 'Curious', 'Neutral', 'Supportive', 'Happy']
+                                                        return moodLabels[value] || ''
+                                                    }}
+                                                />
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        backgroundColor: '#1F2937',
+                                                        border: '1px solid #374151',
+                                                        borderRadius: '8px',
+                                                        color: '#F9FAFB'
+                                                    }}
+                                                    formatter={(value: any, name: string) => {
+                                                        const moodLabels = ['Sad', 'Curious', 'Neutral', 'Supportive', 'Happy']
+                                                        return [moodLabels[value] || 'Unknown', 'Mood']
+                                                    }}
+                                                    labelFormatter={(label) => `Message ${label}`}
+                                                />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="moodValue"
+                                                    stroke="#3B82F6"
+                                                    strokeWidth={3}
+                                                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
+                                                    activeDot={{ r: 8, stroke: '#3B82F6', strokeWidth: 2 }}
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Mood Summary */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                        <h5 className="text-white font-semibold mb-2">Mood Summary</h5>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-300">Total Messages:</span>
+                                                <span className="text-white">{analyticsData.length}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-300">Current Mood:</span>
+                                                <span className={`font-medium ${currentMood === 'happy' ? 'text-green-400' :
+                                                    currentMood === 'sad' ? 'text-blue-400' :
+                                                        currentMood === 'curious' ? 'text-yellow-400' :
+                                                            currentMood === 'supportive' ? 'text-purple-400' :
+                                                                'text-gray-400'
+                                                    }`}>
+                                                    {currentMood}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-300">Mood Changes:</span>
+                                                <span className="text-white">{moodHistory.length - 1}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                        <h5 className="text-white font-semibold mb-2">Mood Distribution</h5>
+                                        <div className="space-y-1">
+                                            {['happy', 'supportive', 'neutral', 'curious', 'sad'].map((mood) => {
+                                                const count = analyticsData.filter(d => d.mood === mood).length
+                                                const percentage = analyticsData.length > 0 ? (count / analyticsData.length) * 100 : 0
+                                                return (
+                                                    <div key={mood} className="flex justify-between text-sm">
+                                                        <span className="text-gray-300 capitalize">{mood}:</span>
+                                                        <span className="text-white">{count} ({percentage.toFixed(1)}%)</span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Recent Mood Changes */}
+                                {moodHistory.length > 1 && (
+                                    <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                        <h5 className="text-white font-semibold mb-3">Recent Mood Changes</h5>
+                                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                                            {moodHistory.slice(-5).map((entry, index) => (
+                                                <div key={index} className="flex justify-between text-sm">
+                                                    <span className="text-gray-300">
+                                                        {new Date(entry.timestamp).toLocaleTimeString()}
+                                                    </span>
+                                                    <span className={`font-medium ${entry.mood === 'happy' ? 'text-green-400' :
+                                                        entry.mood === 'sad' ? 'text-blue-400' :
+                                                            entry.mood === 'curious' ? 'text-yellow-400' :
+                                                                entry.mood === 'supportive' ? 'text-purple-400' :
+                                                                    'text-gray-400'
+                                                        }`}>
+                                                        {entry.mood}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
