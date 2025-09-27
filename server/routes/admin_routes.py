@@ -13,29 +13,24 @@ def require_admin_auth():
     def decorator(f):
         def wrapper(*args, **kwargs):
             try:
-                # Get token from Authorization header
                 auth_header = request.headers.get('Authorization')
                 if not auth_header or not auth_header.startswith('Bearer '):
                     return jsonify({'error': 'Missing or invalid authorization header'}), 401
                 
                 token = auth_header.split(' ')[1]
                 
-                # Verify token
                 payload = verify_jwt_token(token)
                 user_id = payload['user_id']
                 user_type = payload['user_type']
                 
-                # Check if user is admin
                 if user_type != 'admin':
                     return jsonify({'error': 'Admin access required'}), 403
                 
-                # Get user data to verify they're still active
                 user_result = supabase.table('users').select('id, name, email, user_type').eq('id', user_id).eq('is_active', True).execute()
                 
                 if not user_result.data:
                     return jsonify({'error': 'User not found or inactive'}), 404
                 
-                # Add user info to request context
                 request.current_user = user_result.data[0]
                 
                 return f(*args, **kwargs)
@@ -95,14 +90,11 @@ def log_user_activity(user_id: str, activity_type: str, activity_description: st
 def get_dashboard_analytics():
     """Get comprehensive dashboard analytics"""
     try:
-        # Get analytics from view
         analytics_result = supabase.table('admin_dashboard_analytics').select('*').execute()
         analytics = analytics_result.data[0] if analytics_result.data else {}
         
-        # Get recent activity
         recent_activity = supabase.table('user_activity_logs').select('*').order('created_at', desc=True).limit(10).execute()
         
-        # Get system health
         health_checks = supabase.table('system_health_checks').select('*').order('created_at', desc=True).limit(5).execute()
         
         return jsonify({
@@ -119,18 +111,14 @@ def get_dashboard_analytics():
 def get_dashboard_charts():
     """Get chart data for dashboard"""
     try:
-        # User registration over time (last 30 days)
         thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
         user_registrations = supabase.table('users').select('created_at').gte('created_at', thirty_days_ago).execute()
         
-        # Message activity over time (last 7 days)
         seven_days_ago = (datetime.now() - timedelta(days=7)).isoformat()
         message_activity = supabase.table('chat_messages').select('created_at').gte('created_at', seven_days_ago).execute()
         
-        # Security alerts by severity
         security_alerts = supabase.table('security_alerts').select('severity, created_at').execute()
         
-        # Session duration analytics
         session_durations = supabase.table('session_timers').select('total_seconds, created_at').eq('is_active', False).execute()
         
         return jsonify({
@@ -154,7 +142,6 @@ def get_all_users():
         user_type = request.args.get('user_type')
         search = request.args.get('search')
         
-        # Get user activity summary
         query = supabase.table('user_activity_summary').select('*')
         
         if user_type:
@@ -163,7 +150,6 @@ def get_all_users():
         if search:
             query = query.or_(f'name.ilike.%{search}%,email.ilike.%{search}%')
         
-        # Add pagination
         offset = (page - 1) * limit
         query = query.range(offset, offset + limit - 1).order('created_at', desc=True)
         
@@ -184,24 +170,19 @@ def get_all_users():
 def get_user_details(user_id):
     """Get detailed user information"""
     try:
-        # Get user basic info
         user_result = supabase.table('users').select('*').eq('id', user_id).execute()
         if not user_result.data:
             return jsonify({'error': 'User not found'}), 404
         
         user = user_result.data[0]
-        del user['password_hash']  # Remove sensitive data
+        del user['password_hash']
         
-        # Get user activity logs
         activity_logs = supabase.table('user_activity_logs').select('*').eq('user_id', user_id).order('created_at', desc=True).limit(50).execute()
         
-        # Get user sessions
         user_sessions = supabase.table('chat_sessions').select('*').eq('user_id', user_id).order('created_at', desc=True).limit(20).execute()
         
-        # Get user messages analytics
         message_analytics = supabase.table('message_analytics').select('*').eq('user_id', user_id).order('created_at', desc=True).limit(100).execute()
         
-        # Get collaboration summaries
         summaries = supabase.table('collaboration_summaries').select('*').eq('user_id', user_id).order('generated_at', desc=True).execute()
         
         return jsonify({
@@ -226,13 +207,11 @@ def toggle_user_status(user_id):
         if is_active is None:
             return jsonify({'error': 'is_active field is required'}), 400
         
-        # Update user status
         result = supabase.table('users').update({'is_active': is_active}).eq('id', user_id).execute()
         
         if not result.data:
             return jsonify({'error': 'User not found'}), 404
         
-        # Log admin action
         log_admin_action(
             action_type='toggle_user_status',
             target_user_id=user_id,
@@ -240,7 +219,6 @@ def toggle_user_status(user_id):
             metadata={'new_status': is_active}
         )
         
-        # Log user activity
         log_user_activity(
             user_id=user_id,
             activity_type='status_changed',
@@ -261,13 +239,11 @@ def ban_user(user_id):
         data = request.get_json()
         reason = data.get('reason', 'No reason provided')
         
-        # Update user status
         result = supabase.table('users').update({'is_active': False}).eq('id', user_id).execute()
         
         if not result.data:
             return jsonify({'error': 'User not found'}), 404
         
-        # Log admin action
         log_admin_action(
             action_type='ban_user',
             target_user_id=user_id,
@@ -275,7 +251,6 @@ def ban_user(user_id):
             metadata={'reason': reason}
         )
         
-        # Log user activity
         log_user_activity(
             user_id=user_id,
             activity_type='banned',
@@ -300,7 +275,6 @@ def get_security_alerts():
         resolved = request.args.get('resolved')
         alert_type = request.args.get('alert_type')
         
-        # Build query
         query = supabase.table('security_alerts').select('*')
         
         if severity:
@@ -312,7 +286,6 @@ def get_security_alerts():
         if alert_type:
             query = query.eq('alert_type', alert_type)
         
-        # Add pagination
         offset = (page - 1) * limit
         query = query.range(offset, offset + limit - 1).order('created_at', desc=True)
         
@@ -336,7 +309,6 @@ def resolve_security_alert(alert_id):
         data = request.get_json()
         resolution_notes = data.get('resolution_notes', '')
         
-        # Update alert status
         result = supabase.table('security_alerts').update({
             'resolved': True,
             'resolved_at': datetime.now().isoformat()
@@ -345,7 +317,6 @@ def resolve_security_alert(alert_id):
         if not result.data:
             return jsonify({'error': 'Alert not found'}), 404
         
-        # Log admin action
         log_admin_action(
             action_type='resolve_security_alert',
             target_resource='security_alerts',
@@ -371,7 +342,6 @@ def get_message_analytics():
         pii_detected = request.args.get('pii_detected')
         toxicity_threshold = request.args.get('toxicity_threshold', 0.7)
         
-        # Build query
         query = supabase.table('message_analytics').select('*')
         
         if user_id:
@@ -386,7 +356,6 @@ def get_message_analytics():
         if toxicity_threshold:
             query = query.gte('toxicity_score', float(toxicity_threshold))
         
-        # Add pagination
         offset = (page - 1) * limit
         query = query.range(offset, offset + limit - 1).order('created_at', desc=True)
         
@@ -407,13 +376,10 @@ def get_message_analytics():
 def get_toxicity_analytics():
     """Get toxicity analysis data"""
     try:
-        # Get toxicity distribution
         toxicity_data = supabase.table('message_analytics').select('toxicity_score, created_at').gte('toxicity_score', 0.5).execute()
         
-        # Get PII detection data
         pii_data = supabase.table('message_analytics').select('pii_types, created_at').eq('pii_detected', True).execute()
         
-        # Get sentiment analysis
         sentiment_data = supabase.table('message_analytics').select('sentiment_score, mood_detected, created_at').execute()
         
         return jsonify({
@@ -431,13 +397,10 @@ def get_toxicity_analytics():
 def get_system_health():
     """Get system health status"""
     try:
-        # Get recent health checks
         health_checks = supabase.table('system_health_checks').select('*').order('created_at', desc=True).limit(20).execute()
         
-        # Get system metrics
         metrics = supabase.table('system_metrics').select('*').order('timestamp', desc=True).limit(50).execute()
         
-        # Get active sessions count
         active_sessions = supabase.table('session_timers').select('id').eq('is_active', True).execute()
         
         return jsonify({
@@ -484,7 +447,6 @@ def get_audit_logs():
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
         
-        # Build query
         query = supabase.table('audit_logs').select('*')
         
         if action:
@@ -499,7 +461,6 @@ def get_audit_logs():
         if date_to:
             query = query.lte('created_at', date_to)
         
-        # Add pagination
         offset = (page - 1) * limit
         query = query.range(offset, offset + limit - 1).order('created_at', desc=True)
         
@@ -525,7 +486,6 @@ def get_admin_actions():
         action_type = request.args.get('action_type')
         admin_id = request.args.get('admin_id')
         
-        # Build query
         query = supabase.table('admin_actions').select('*')
         
         if action_type:
