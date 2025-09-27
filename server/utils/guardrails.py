@@ -58,17 +58,14 @@ class GuardrailsService:
         }
         
         try:
-            # Get conversation context if session_id provided
             conversation_history = []
             if session_id and user_id:
                 context = context_manager.get_context(user_id, session_id, user_preferences)
                 conversation_history = context.get_recent_context()
             
-            # Mood Analysis
             mood_analysis = llm_mood_analyzer.analyze_mood(message, conversation_history)
             results['mood_analysis'] = mood_analysis
             
-            # Input Validation
             if self.config['enable_input_validation']:
                 validation_results = self.input_guard.validate_input(message)
                 if not validation_results['is_valid']:
@@ -78,7 +75,6 @@ class GuardrailsService:
                     results['processing_log'].append("Input validation failed")
                     return results
             
-            # Toxicity Detection
             toxicity_detected = False
             if self.config['enable_toxicity_detection']:
                 toxicity_results = self.input_guard.detect_toxicity(
@@ -94,19 +90,16 @@ class GuardrailsService:
                     )
                     results['processing_log'].append("Toxicity detected")
             
-            # Restricted Content Check - Now with Educational Responses
             content_results = self.input_guard.check_restricted_content(message)
             if content_results['has_restricted_content']:
-                # Instead of blocking, provide educational response
                 results['response_type'] = 'educational'
                 results['educational_response'] = self._generate_educational_response(
                     content_results, user_preferences, mood_analysis
                 )
                 results['processing_log'].append("Educational response generated for restricted content")
                 
-                # Don't block, but mark as requiring special handling
                 results['should_block'] = False
-                results['is_safe'] = True  # Safe to process with educational response
+                results['is_safe'] = True  
             
             #PII Detection and Scrubbing
             pii_summary = self.pii_guard.get_pii_summary(message)
@@ -117,7 +110,6 @@ class GuardrailsService:
                 )
                 results['processing_log'].append("PII detected")
                 
-                # Scrub PII
                 if self.config['enable_pii_scrubbing']:
                     scrubbed_message, scrub_info = self.pii_guard.scrub_pii(message)
                     results['processed_message'] = scrubbed_message
@@ -156,13 +148,10 @@ class GuardrailsService:
     
     def _generate_educational_response(self, content_results: Dict, user_preferences: Dict, mood_analysis: Dict) -> Dict:
         """Generate educational response for restricted content"""
-        # Determine content type based on found keywords
         content_type = self._classify_content_type(content_results.get('found_keywords', []))
         
-        # Generate educational response using LLM
         from .llm_response_generator import llm_response_generator
         
-        # Create a simple educational prompt for LLM
         educational_prompt = f"Generate an educational, supportive response for someone asking about: {content_type}. Be helpful and informative while maintaining appropriate boundaries."
         
         educational_content = llm_response_generator.generate_response(
@@ -179,7 +168,6 @@ class GuardrailsService:
             'approach': 'gentle_guidance'
         }
         
-        # Add mood-based personalization
         if mood_analysis.get('mood') in ['sad', 'supportive']:
             educational_response['tone'] = 'empathetic'
             educational_response['approach'] = 'supportive'
@@ -218,21 +206,17 @@ class GuardrailsService:
         Returns:
             Dict: Enhanced processing results
         """
-        # Get conversation context
         context = context_manager.get_context(user_id, session_id, user_preferences)
         conversation_history = context.get_recent_context()
         
-        # Process through guardrails
         guardrails_results = self.process_message(
             message, user_id, session_id, user_preferences
         )
         
-        # Analyze mood using LLM
         mood_analysis = llm_mood_analyzer.analyze_mood(message, conversation_history)
         current_mood = mood_analysis.get('mood', 'neutral')
         mood_confidence = mood_analysis.get('confidence', 0.0)
         
-        # Update context with new message and mood
         context_manager.update_context(
             session_id, 
             {'content': message, 'message_type': 'user'}, 
@@ -240,12 +224,10 @@ class GuardrailsService:
             mood_confidence
         )
         
-        # Determine response type and generate guidance
         response_guidance = self._generate_response_guidance(
             guardrails_results, mood_analysis, context
         )
         
-        # Check if conversation should be redirected
         should_redirect = context.should_redirect()
         redirect_suggestions = context.get_redirect_suggestions() if should_redirect else []
         
@@ -264,19 +246,16 @@ class GuardrailsService:
         mood = mood_analysis.get('mood', 'neutral')
         confidence = mood_analysis.get('confidence', 0.0)
         
-        # Get mood-based guidance
         guidance = {
             'mood': mood,
             'tone': 'supportive' if mood == 'sad' else 'friendly',
             'approach': 'empathetic' if mood == 'sad' else 'conversational'
         }
         
-        # Add educational response guidance if needed
         if guardrails_results.get('response_type') == 'educational':
             guidance['educational_content'] = guardrails_results.get('educational_response')
             guidance['approach'] = 'educational'
         
-        # Add context awareness
         if context.topics_discussed:
             guidance['context_aware'] = True
             guidance['recent_topics'] = context.topics_discussed[-3:]
