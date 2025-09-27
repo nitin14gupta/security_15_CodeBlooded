@@ -211,3 +211,138 @@ SELECT
     COUNT(CASE WHEN severity = 'medium' AND resolved = FALSE THEN 1 END) as medium_alerts,
     COUNT(CASE WHEN severity = 'low' AND resolved = FALSE THEN 1 END) as low_alerts
 FROM security_alerts;
+
+-- Create system_metrics table for performance monitoring
+CREATE TABLE IF NOT EXISTS system_metrics (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    metric_name VARCHAR(100) NOT NULL,
+    metric_value DECIMAL(10,4) NOT NULL,
+    metric_unit VARCHAR(20),
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    metadata JSONB
+);
+
+-- Create index for system metrics
+CREATE INDEX IF NOT EXISTS idx_system_metrics_name ON system_metrics(metric_name);
+CREATE INDEX IF NOT EXISTS idx_system_metrics_timestamp ON system_metrics(timestamp);
+
+-- Create user_activity_logs table for detailed user tracking
+CREATE TABLE IF NOT EXISTS user_activity_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    activity_type VARCHAR(50) NOT NULL,
+    activity_description TEXT,
+    ip_address INET,
+    user_agent TEXT,
+    session_id UUID,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for user activity logs
+CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user_id ON user_activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_activity_logs_activity_type ON user_activity_logs(activity_type);
+CREATE INDEX IF NOT EXISTS idx_user_activity_logs_created_at ON user_activity_logs(created_at);
+
+-- Create message_analytics table for chat message analysis
+CREATE TABLE IF NOT EXISTS message_analytics (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    message_id UUID REFERENCES chat_messages(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    toxicity_score DECIMAL(3,2),
+    pii_detected BOOLEAN DEFAULT FALSE,
+    pii_types TEXT[],
+    sentiment_score DECIMAL(3,2),
+    mood_detected VARCHAR(20),
+    processing_time_ms INTEGER,
+    guardrail_actions JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for message analytics
+CREATE INDEX IF NOT EXISTS idx_message_analytics_user_id ON message_analytics(user_id);
+CREATE INDEX IF NOT EXISTS idx_message_analytics_session_id ON message_analytics(session_id);
+CREATE INDEX IF NOT EXISTS idx_message_analytics_created_at ON message_analytics(created_at);
+
+-- Create admin_actions table for tracking admin activities
+CREATE TABLE IF NOT EXISTS admin_actions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    admin_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    action_type VARCHAR(50) NOT NULL,
+    target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    target_resource VARCHAR(100),
+    action_description TEXT,
+    ip_address INET,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for admin actions
+CREATE INDEX IF NOT EXISTS idx_admin_actions_admin_id ON admin_actions(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_actions_action_type ON admin_actions(action_type);
+CREATE INDEX IF NOT EXISTS idx_admin_actions_created_at ON admin_actions(created_at);
+
+-- Create system_health_checks table for monitoring
+CREATE TABLE IF NOT EXISTS system_health_checks (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    check_name VARCHAR(100) NOT NULL,
+    check_status VARCHAR(20) NOT NULL CHECK (check_status IN ('healthy', 'warning', 'critical', 'down')),
+    check_message TEXT,
+    response_time_ms INTEGER,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for system health checks
+CREATE INDEX IF NOT EXISTS idx_system_health_checks_status ON system_health_checks(check_status);
+CREATE INDEX IF NOT EXISTS idx_system_health_checks_created_at ON system_health_checks(created_at);
+
+-- Create comprehensive analytics view
+CREATE OR REPLACE VIEW admin_dashboard_analytics AS
+SELECT 
+    -- User statistics
+    (SELECT COUNT(*) FROM users) as total_users,
+    (SELECT COUNT(*) FROM users WHERE is_active = TRUE) as active_users,
+    (SELECT COUNT(*) FROM users WHERE user_type = 'admin') as admin_users,
+    (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours') as new_users_24h,
+    (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days') as new_users_7d,
+    
+    -- Chat statistics
+    (SELECT COUNT(*) FROM chat_sessions) as total_sessions,
+    (SELECT COUNT(*) FROM chat_sessions WHERE created_at >= NOW() - INTERVAL '24 hours') as new_sessions_24h,
+    (SELECT COUNT(*) FROM chat_messages) as total_messages,
+    (SELECT COUNT(*) FROM chat_messages WHERE created_at >= NOW() - INTERVAL '24 hours') as new_messages_24h,
+    
+    -- Security statistics
+    (SELECT COUNT(*) FROM security_alerts WHERE resolved = FALSE) as unresolved_alerts,
+    (SELECT COUNT(*) FROM security_alerts WHERE severity = 'critical' AND resolved = FALSE) as critical_alerts,
+    (SELECT COUNT(*) FROM message_analytics WHERE pii_detected = TRUE) as pii_detections,
+    (SELECT COUNT(*) FROM message_analytics WHERE toxicity_score > 0.7) as toxic_messages,
+    
+    -- System statistics
+    (SELECT COUNT(*) FROM session_timers WHERE is_active = TRUE) as active_sessions,
+    (SELECT AVG(total_seconds) FROM session_timers WHERE is_active = FALSE) as avg_session_duration,
+    (SELECT COUNT(*) FROM collaboration_summaries) as total_summaries;
+
+-- Create user activity summary view
+CREATE OR REPLACE VIEW user_activity_summary AS
+SELECT 
+    u.id,
+    u.name,
+    u.email,
+    u.user_type,
+    u.is_active,
+    u.created_at,
+    COUNT(DISTINCT cs.id) as total_sessions,
+    COUNT(DISTINCT cm.id) as total_messages,
+    COUNT(DISTINCT ual.id) as total_activities,
+    MAX(ual.created_at) as last_activity,
+    COUNT(DISTINCT CASE WHEN ma.pii_detected = TRUE THEN ma.id END) as pii_violations,
+    COUNT(DISTINCT CASE WHEN ma.toxicity_score > 0.7 THEN ma.id END) as toxicity_violations
+FROM users u
+LEFT JOIN chat_sessions cs ON u.id = cs.user_id
+LEFT JOIN chat_messages cm ON u.id = cm.user_id
+LEFT JOIN user_activity_logs ual ON u.id = ual.user_id
+LEFT JOIN message_analytics ma ON u.id = ma.user_id
+GROUP BY u.id, u.name, u.email, u.user_type, u.is_active, u.created_at;

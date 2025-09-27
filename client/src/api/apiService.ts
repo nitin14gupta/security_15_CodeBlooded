@@ -376,6 +376,155 @@ class ApiService {
         console.log('Getting daily timer total');
         return this.request<DailyTimerTotal>('/api/chat/session-timer/daily-total');
     }
+
+    // Admin Dashboard methods
+    async getAdminDashboardAnalytics(): Promise<any> {
+        console.log('Getting admin dashboard analytics');
+        return this.request<any>('/api/admin/dashboard/analytics');
+    }
+
+    async getAdminDashboardCharts(): Promise<any> {
+        console.log('Getting admin dashboard charts');
+        return this.request<any>('/api/admin/dashboard/charts');
+    }
+
+    // User Management
+    async getAdminUsers(page: number = 1, limit: number = 20, userType?: string, search?: string): Promise<any> {
+        console.log('Getting admin users');
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            ...(userType && { user_type: userType }),
+            ...(search && { search })
+        });
+        return this.request<any>(`/api/admin/users?${params}`);
+    }
+
+    async getAdminUserDetails(userId: string): Promise<any> {
+        console.log('Getting admin user details:', userId);
+        return this.request<any>(`/api/admin/users/${userId}`);
+    }
+
+    async toggleUserStatus(userId: string, isActive: boolean): Promise<any> {
+        console.log('Toggling user status:', userId, isActive);
+        return this.request<any>(`/api/admin/users/${userId}/toggle-status`, {
+            method: 'PUT',
+            body: JSON.stringify({ is_active: isActive })
+        });
+    }
+
+    async banUser(userId: string, reason: string): Promise<any> {
+        console.log('Banning user:', userId, reason);
+        return this.request<any>(`/api/admin/users/${userId}/ban`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        });
+    }
+
+    // Security Management
+    async getSecurityAlerts(page: number = 1, limit: number = 20, severity?: string, resolved?: boolean, alertType?: string): Promise<any> {
+        console.log('Getting security alerts');
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            ...(severity && { severity }),
+            ...(resolved !== undefined && { resolved: resolved.toString() }),
+            ...(alertType && { alert_type: alertType })
+        });
+        return this.request<any>(`/api/admin/security/alerts?${params}`);
+    }
+
+    async resolveSecurityAlert(alertId: string, resolutionNotes: string): Promise<any> {
+        console.log('Resolving security alert:', alertId);
+        return this.request<any>(`/api/admin/security/alerts/${alertId}/resolve`, {
+            method: 'PUT',
+            body: JSON.stringify({ resolution_notes: resolutionNotes })
+        });
+    }
+
+    // Analytics
+    async getMessageAnalytics(page: number = 1, limit: number = 50, userId?: string, sessionId?: string, piiDetected?: boolean, toxicityThreshold?: number): Promise<any> {
+        console.log('Getting message analytics');
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            ...(userId && { user_id: userId }),
+            ...(sessionId && { session_id: sessionId }),
+            ...(piiDetected !== undefined && { pii_detected: piiDetected.toString() }),
+            ...(toxicityThreshold && { toxicity_threshold: toxicityThreshold.toString() })
+        });
+        return this.request<any>(`/api/admin/analytics/messages?${params}`);
+    }
+
+    async getToxicityAnalytics(): Promise<any> {
+        console.log('Getting toxicity analytics');
+        return this.request<any>('/api/admin/analytics/toxicity');
+    }
+
+    // System Monitoring
+    async getSystemHealth(): Promise<any> {
+        console.log('Getting system health');
+        return this.request<any>('/api/admin/system/health');
+    }
+
+    async recordSystemMetric(metricName: string, metricValue: number, metricUnit?: string, metadata?: any): Promise<any> {
+        console.log('Recording system metric:', metricName);
+        return this.request<any>('/api/admin/system/metrics', {
+            method: 'POST',
+            body: JSON.stringify({
+                metric_name: metricName,
+                metric_value: metricValue,
+                metric_unit: metricUnit,
+                metadata
+            })
+        });
+    }
+
+    // Audit and Logging
+    async getAuditLogs(page: number = 1, limit: number = 50, action?: string, userId?: string, dateFrom?: string, dateTo?: string): Promise<any> {
+        console.log('Getting audit logs');
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            ...(action && { action }),
+            ...(userId && { user_id: userId }),
+            ...(dateFrom && { date_from: dateFrom }),
+            ...(dateTo && { date_to: dateTo })
+        });
+        return this.request<any>(`/api/admin/audit/logs?${params}`);
+    }
+
+    async getAdminActions(page: number = 1, limit: number = 50, actionType?: string, adminId?: string): Promise<any> {
+        console.log('Getting admin actions');
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString(),
+            ...(actionType && { action_type: actionType }),
+            ...(adminId && { admin_id: adminId })
+        });
+        return this.request<any>(`/api/admin/audit/admin-actions?${params}`);
+    }
+
+    // Reports and Exports
+    async exportUsersReport(): Promise<any> {
+        console.log('Exporting users report');
+        return this.request<any>('/api/admin/reports/users');
+    }
+
+    async exportSecurityReport(): Promise<any> {
+        console.log('Exporting security report');
+        return this.request<any>('/api/admin/reports/security');
+    }
+
+    async exportActivityReport(userId?: string, dateFrom?: string, dateTo?: string): Promise<any> {
+        console.log('Exporting activity report');
+        const params = new URLSearchParams({
+            ...(userId && { user_id: userId }),
+            ...(dateFrom && { date_from: dateFrom }),
+            ...(dateTo && { date_to: dateTo })
+        });
+        return this.request<any>(`/api/admin/reports/activity?${params}`);
+    }
 }
 
 // create singleton instance
