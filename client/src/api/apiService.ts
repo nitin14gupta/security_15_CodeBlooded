@@ -113,6 +113,61 @@ export interface ConversationContext {
     session_id: string;
 }
 
+export interface CollaborationSummary {
+    id: string;
+    session_id: string;
+    user_id: string;
+    summary_title: string;
+    summary_content: string;
+    key_insights: string[];
+    mood_analysis: {
+        patterns?: string;
+        trends?: string;
+        [key: string]: any;
+    };
+    recommendations: string[];
+    generated_at: string;
+    created_at: string;
+    chat_sessions?: {
+        id: string;
+        title: string;
+        created_at: string;
+    };
+}
+
+export interface CollaborationSummaryResponse {
+    message: string;
+    summary: CollaborationSummary;
+}
+
+export interface CollaborationSummariesResponse {
+    summaries: CollaborationSummary[];
+}
+
+export interface SessionTimer {
+    id: string;
+    session_id: string;
+    user_id: string;
+    start_time: string;
+    end_time?: string;
+    total_seconds: number;
+    is_active: boolean;
+    current_elapsed_seconds?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TimerResponse {
+    message: string;
+    timer: SessionTimer;
+}
+
+export interface DailyTimerTotal {
+    daily_total_seconds: number;
+    daily_total_minutes: number;
+    daily_total_hours: number;
+}
+
 export interface MoodAnalysisResponse {
     session_id: string;
     mood_analysis: {
@@ -274,6 +329,52 @@ class ApiService {
     async getMoodAnalysis(sessionId: string): Promise<MoodAnalysisResponse> {
         console.log('Getting mood analysis for session:', sessionId);
         return this.request<MoodAnalysisResponse>(`${API_CONFIG.ENDPOINTS.CHAT.SESSIONS}/${sessionId}/mood-analysis`);
+    }
+
+    // Collaboration Summary methods
+    async generateCollaborationSummary(sessionId: string): Promise<CollaborationSummaryResponse> {
+        console.log('Generating collaboration summary for session:', sessionId);
+        return this.request<CollaborationSummaryResponse>('/chat/generate-collaboration-summary', {
+            method: 'POST',
+            body: JSON.stringify({ session_id: sessionId })
+        });
+    }
+
+    async getCollaborationSummaries(): Promise<CollaborationSummariesResponse> {
+        console.log('Getting collaboration summaries');
+        return this.request<CollaborationSummariesResponse>('/chat/collaboration-summaries');
+    }
+
+    async getCollaborationSummary(summaryId: string): Promise<CollaborationSummaryResponse> {
+        console.log('Getting collaboration summary:', summaryId);
+        return this.request<CollaborationSummaryResponse>(`/chat/collaboration-summary/${summaryId}`);
+    }
+
+    // Session Timer methods
+    async startSessionTimer(sessionId: string): Promise<TimerResponse> {
+        console.log('Starting session timer for:', sessionId);
+        return this.request<TimerResponse>('/chat/session-timer/start', {
+            method: 'POST',
+            body: JSON.stringify({ session_id: sessionId })
+        });
+    }
+
+    async stopSessionTimer(sessionId: string): Promise<TimerResponse> {
+        console.log('Stopping session timer for:', sessionId);
+        return this.request<TimerResponse>('/chat/session-timer/stop', {
+            method: 'POST',
+            body: JSON.stringify({ session_id: sessionId })
+        });
+    }
+
+    async getSessionTimer(sessionId: string): Promise<{ timer: SessionTimer | null }> {
+        console.log('Getting session timer for:', sessionId);
+        return this.request<{ timer: SessionTimer | null }>(`/chat/session-timer/${sessionId}`);
+    }
+
+    async getDailyTimerTotal(): Promise<DailyTimerTotal> {
+        console.log('Getting daily timer total');
+        return this.request<DailyTimerTotal>('/chat/session-timer/daily-total');
     }
 }
 

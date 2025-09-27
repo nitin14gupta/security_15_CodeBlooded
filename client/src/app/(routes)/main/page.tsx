@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
-import { apiService, ChatSession, ChatMessage, EnhancedChatResponse, MoodAnalysis, ConversationContext } from '@/api/apiService'
+import { apiService, ChatSession, ChatMessage, EnhancedChatResponse, MoodAnalysis, ConversationContext, CollaborationSummary, SessionTimer, DailyTimerTotal } from '@/api/apiService'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface LocalChatMessage {
@@ -26,8 +26,11 @@ export default function CareCompanionPage() {
 
     // Original CareCompanion state
     const [inputValue, setInputValue] = useState('')
-    const [sessionTime, setSessionTime] = useState(0)
+    const [sessionTime, setSessionTime] = useState(0) // in seconds
     const [isTimerRunning, setIsTimerRunning] = useState(false)
+    const [dailySessionTime, setDailySessionTime] = useState(0) // in seconds
+    const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
+    const [currentSessionTimer, setCurrentSessionTimer] = useState<SessionTimer | null>(null)
 
     // Chat state - managing the conversation
     const [messages, setMessages] = useState<LocalChatMessage[]>([])
@@ -51,6 +54,12 @@ export default function CareCompanionPage() {
     const [showAnalytics, setShowAnalytics] = useState(false)
     const [analyticsData, setAnalyticsData] = useState<Array<{ message: number, mood: string, moodValue: number, timestamp: string }>>([])
 
+    // Collaboration Summary state
+    const [showCollaborationSummary, setShowCollaborationSummary] = useState(false)
+    const [collaborationSummaries, setCollaborationSummaries] = useState<CollaborationSummary[]>([])
+    const [selectedSummary, setSelectedSummary] = useState<CollaborationSummary | null>(null)
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+
     // Auth and session management
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -71,19 +80,28 @@ export default function CareCompanionPage() {
         if (isAuthenticated) {
             console.log('User authenticated, loading sessions...')
             loadSessions()
+            loadDailySessionTime()
+            loadCollaborationSummaries()
         }
     }, [isAuthenticated])
 
-    // Auto-increment timer every minute when running
+    // Auto-increment timer every second when running
     useEffect(() => {
         let interval: NodeJS.Timeout
         if (isTimerRunning) {
             interval = setInterval(() => {
-                setSessionTime(prev => prev + 1)
-            }, 60000) // 60 seconds = 1 minute
+                setSessionTime(prev => {
+                    const newTime = prev + 1
+                    // Update daily session time every 60 seconds (1 minute)
+                    if (newTime % 60 === 0) {
+                        updateDailySessionTime(1)
+                    }
+                    return newTime
+                })
+            }, 1000) // 1 second
         }
         return () => clearInterval(interval)
-    }, [isTimerRunning])
+    }, [isTimerRunning, dailySessionTime])
 
     const handleLogout = async () => {
         try {
@@ -107,6 +125,88 @@ export default function CareCompanionPage() {
         }
     }
 
+    const loadDailySessionTime = async () => {
+        try {
+            // Load from database first
+            await loadDailyTimerTotal()
+
+            // Fallback to localStorage if database fails
+            const today = new Date().toDateString()
+            const storedTime = localStorage.getItem(`dailySessionTime_${today}`)
+            if (storedTime && dailySessionTime === 0) {
+                setDailySessionTime(parseInt(storedTime))
+            }
+        } catch (err) {
+            console.error('Failed to load daily session time:', err)
+            // Fallback to localStorage
+            const today = new Date().toDateString()
+            const storedTime = localStorage.getItem(`dailySessionTime_${today}`)
+            if (storedTime) {
+                setDailySessionTime(parseInt(storedTime))
+            }
+        }
+    }
+
+    const updateDailySessionTime = (additionalMinutes: number) => {
+        try {
+            const today = new Date().toDateString()
+            const newTotal = dailySessionTime + additionalMinutes
+            setDailySessionTime(newTotal)
+            localStorage.setItem(`dailySessionTime_${today}`, newTotal.toString())
+        } catch (err) {
+            console.error('Failed to update daily session time:', err)
+        }
+    }
+
+    // Database timer functions
+    const startDatabaseTimer = async (sessionId: string) => {
+        try {
+            console.log('Starting database timer for session:', sessionId)
+            const response = await apiService.startSessionTimer(sessionId)
+            setCurrentSessionTimer(response.timer)
+            console.log('Database timer started:', response.timer.id)
+        } catch (err) {
+            console.error('Failed to start database timer:', err)
+        }
+    }
+
+    const stopDatabaseTimer = async (sessionId: string) => {
+        try {
+            console.log('Stopping database timer for session:', sessionId)
+            await apiService.stopSessionTimer(sessionId)
+            setCurrentSessionTimer(null)
+            console.log('Database timer stopped')
+        } catch (err) {
+            console.error('Failed to stop database timer:', err)
+        }
+    }
+
+    const loadSessionTimer = async (sessionId: string) => {
+        try {
+            console.log('Loading session timer for:', sessionId)
+            const response = await apiService.getSessionTimer(sessionId)
+            if (response.timer) {
+                setCurrentSessionTimer(response.timer)
+                if (response.timer.is_active && response.timer.current_elapsed_seconds) {
+                    setSessionTime(response.timer.current_elapsed_seconds)
+                    setIsTimerRunning(true)
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load session timer:', err)
+        }
+    }
+
+    const loadDailyTimerTotal = async () => {
+        try {
+            console.log('Loading daily timer total...')
+            const response = await apiService.getDailyTimerTotal()
+            setDailySessionTime(response.daily_total_seconds)
+        } catch (err) {
+            console.error('Failed to load daily timer total:', err)
+        }
+    }
+
     const createNewSession = async () => {
         if (!newSessionTitle.trim()) return
 
@@ -118,6 +218,15 @@ export default function CareCompanionPage() {
             setMessages([])
             setNewSessionTitle('')
             setShowNewSessionModal(false)
+
+            // Start timer for new session
+            setSessionTime(0)
+            setIsTimerRunning(true)
+            setSessionStartTime(new Date())
+
+            // Start database timer
+            await startDatabaseTimer(response.session.id)
+
             showSuccess('New chat session created')
         } catch (err) {
             showError('Failed to create session', 'Please try again')
@@ -143,6 +252,17 @@ export default function CareCompanionPage() {
 
             setMessages(localMessages)
             console.log('Loaded messages:', localMessages.length)
+
+            // Load existing timer for session
+            await loadSessionTimer(sessionId)
+
+            // If no active timer, start a new one
+            if (!currentSessionTimer || !currentSessionTimer.is_active) {
+                setSessionTime(0)
+                setIsTimerRunning(true)
+                setSessionStartTime(new Date())
+                await startDatabaseTimer(sessionId)
+            }
 
             // Load conversation context and mood analysis
             await loadConversationContext(sessionId)
@@ -213,6 +333,14 @@ export default function CareCompanionPage() {
                 setSessions(prev => [response.session, ...prev])
                 setCurrentSession(response.session)
                 sessionId = response.session.id
+
+                // Start timer for auto-created session
+                setSessionTime(0)
+                setIsTimerRunning(true)
+                setSessionStartTime(new Date())
+
+                // Start database timer
+                await startDatabaseTimer(sessionId)
             } catch (err) {
                 showError('Failed to create session', 'Please try again')
                 return
@@ -329,6 +457,14 @@ export default function CareCompanionPage() {
                 setSessions(prev => [response.session, ...prev])
                 setCurrentSession(response.session)
                 sessionId = response.session.id
+
+                // Start timer for auto-created session
+                setSessionTime(0)
+                setIsTimerRunning(true)
+                setSessionStartTime(new Date())
+
+                // Start database timer
+                await startDatabaseTimer(sessionId)
             } catch (err) {
                 showError('Failed to create session', 'Please try again')
                 return
@@ -441,6 +577,68 @@ export default function CareCompanionPage() {
         setShowAnalytics(true)
     }
 
+    // Collaboration Summary functions
+    const generateCollaborationSummary = async () => {
+        if (!currentSession) {
+            showError('No active session', 'Please start a chat session first')
+            return
+        }
+
+        setIsGeneratingSummary(true)
+        try {
+            console.log('Generating collaboration summary for session:', currentSession.id)
+            const response = await apiService.generateCollaborationSummary(currentSession.id)
+            showSuccess('Collaboration summary generated successfully!')
+
+            // Load updated summaries
+            await loadCollaborationSummaries()
+
+            // Show the summary modal
+            setSelectedSummary(response.summary)
+            setShowCollaborationSummary(true)
+        } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+                showError('Summary already exists', 'A collaboration summary has already been generated for this session')
+            } else {
+                showError('Failed to generate summary', 'Please try again later')
+            }
+            console.error('Generate summary error:', err)
+        } finally {
+            setIsGeneratingSummary(false)
+        }
+    }
+
+    const loadCollaborationSummaries = async () => {
+        try {
+            console.log('Loading collaboration summaries...')
+            const response = await apiService.getCollaborationSummaries()
+            setCollaborationSummaries(response.summaries)
+            console.log('Loaded summaries:', response.summaries.length)
+        } catch (err) {
+            console.error('Failed to load collaboration summaries:', err)
+        }
+    }
+
+    const openCollaborationSummary = (summary: CollaborationSummary) => {
+        setSelectedSummary(summary)
+        setShowCollaborationSummary(true)
+    }
+
+    // Helper function to format time with seconds
+    const formatTime = (seconds: number) => {
+        const hours = Math.floor(seconds / 3600)
+        const minutes = Math.floor((seconds % 3600) / 60)
+        const secs = seconds % 60
+
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${secs}s`
+        } else if (minutes > 0) {
+            return `${minutes}m ${secs}s`
+        } else {
+            return `${secs}s`
+        }
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
@@ -536,6 +734,35 @@ export default function CareCompanionPage() {
                                             </button>
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+
+                            {/* Collaboration Summaries */}
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Summaries</h3>
+                                <div className="max-h-32 overflow-y-auto space-y-1">
+                                    {collaborationSummaries.slice(0, 3).map((summary) => (
+                                        <div
+                                            key={summary.id}
+                                            className="p-2 rounded-lg transition-all duration-300 cursor-pointer text-gray-300 hover:bg-gray-700/30 hover:text-white"
+                                            onClick={() => openCollaborationSummary(summary)}
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-xs">📋</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-medium truncate">{summary.summary_title}</p>
+                                                    <p className="text-xs opacity-70">
+                                                        {new Date(summary.generated_at).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {collaborationSummaries.length === 0 && (
+                                        <div className="text-xs text-gray-400 text-center py-2">
+                                            No summaries yet
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -690,7 +917,7 @@ export default function CareCompanionPage() {
 
                                     {/* Session Status */}
                                     <div className="text-gray-400 text-sm">
-                                        Session timer: {sessionTime}m • Break suggestion: after 25 min
+                                        Session timer: {formatTime(sessionTime)} • Daily total: {formatTime(dailySessionTime)} • Break suggestion: after 25 min
                                     </div>
                                 </div>
 
@@ -709,8 +936,12 @@ export default function CareCompanionPage() {
 
                                 {/* Action Buttons */}
                                 <div className="flex space-x-3 pt-4">
-                                    <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
-                                        Generate Collaboration Summary
+                                    <button
+                                        onClick={generateCollaborationSummary}
+                                        disabled={isGeneratingSummary || !currentSession}
+                                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isGeneratingSummary ? 'Generating...' : 'Generate Collaboration Summary'}
                                     </button>
                                     <button className="bg-gray-500 hover:bg-black-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200">
                                         Explore Community
@@ -728,7 +959,10 @@ export default function CareCompanionPage() {
                             <div className="bg-black/30 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
                                 <h3 className="text-white font-semibold">Session Today</h3>
                                 <div className="text-2xl font-bold text-white">
-                                    {sessions.length} sessions • {sessionTime} minutes
+                                    {sessions.length} sessions • {formatTime(dailySessionTime)} today
+                                </div>
+                                <div className="text-sm text-gray-300">
+                                    Current session: {formatTime(sessionTime)}
                                 </div>
                             </div>
 
@@ -784,9 +1018,9 @@ export default function CareCompanionPage() {
                             <div className="bg-black/30 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-gray-700/50">
                                 <h3 className="text-white font-semibold">Session Health</h3>
                                 <div className="space-y-2">
-                                    <div className="text-gray-300 text-sm">Active minutes today</div>
-                                    <div className="text-2xl font-bold text-white">{sessionTime} min</div>
-                                    <div className="text-gray-400 text-xs">Keep balanced — take a break if you exceed 60 minutes.</div>
+                                    <div className="text-gray-300 text-sm">Active time today</div>
+                                    <div className="text-2xl font-bold text-white">{formatTime(dailySessionTime)}</div>
+                                    <div className="text-gray-400 text-xs">Current session: {formatTime(sessionTime)} • Keep balanced — take a break if you exceed 60 minutes.</div>
                                 </div>
                             </div>
 
@@ -984,6 +1218,91 @@ export default function CareCompanionPage() {
                                 )}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Collaboration Summary Modal */}
+            {showCollaborationSummary && selectedSummary && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-black/60 backdrop-blur-lg rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-700/50">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-semibold text-white">📋 Collaboration Summary</h3>
+                            <button
+                                onClick={() => setShowCollaborationSummary(false)}
+                                className="text-gray-400 hover:text-white text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Summary Header */}
+                            <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                <h4 className="text-xl font-semibold text-white mb-2">{selectedSummary.summary_title}</h4>
+                                <div className="text-sm text-gray-300">
+                                    Generated: {new Date(selectedSummary.generated_at).toLocaleString()}
+                                </div>
+                                {selectedSummary.chat_sessions && (
+                                    <div className="text-sm text-gray-400 mt-1">
+                                        Session: {selectedSummary.chat_sessions.title}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Summary Content */}
+                            <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                <h5 className="text-lg font-semibold text-white mb-3">Summary</h5>
+                                <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                    {selectedSummary.summary_content}
+                                </p>
+                            </div>
+
+                            {/* Key Insights */}
+                            {selectedSummary.key_insights && selectedSummary.key_insights.length > 0 && (
+                                <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                    <h5 className="text-lg font-semibold text-white mb-3">Key Insights</h5>
+                                    <ul className="space-y-2">
+                                        {selectedSummary.key_insights.map((insight, index) => (
+                                            <li key={index} className="text-gray-300 flex items-start space-x-2">
+                                                <span className="text-blue-400 mt-1">•</span>
+                                                <span>{insight}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Mood Analysis */}
+                            {selectedSummary.mood_analysis && Object.keys(selectedSummary.mood_analysis).length > 0 && (
+                                <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                    <h5 className="text-lg font-semibold text-white mb-3">Mood Analysis</h5>
+                                    <div className="space-y-2">
+                                        {Object.entries(selectedSummary.mood_analysis).map(([key, value]) => (
+                                            <div key={key} className="flex justify-between">
+                                                <span className="text-gray-300 capitalize">{key.replace('_', ' ')}:</span>
+                                                <span className="text-white">{String(value)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Recommendations */}
+                            {selectedSummary.recommendations && selectedSummary.recommendations.length > 0 && (
+                                <div className="bg-black/30 rounded-xl p-4 border border-gray-700/30">
+                                    <h5 className="text-lg font-semibold text-white mb-3">Recommendations</h5>
+                                    <ul className="space-y-2">
+                                        {selectedSummary.recommendations.map((recommendation, index) => (
+                                            <li key={index} className="text-gray-300 flex items-start space-x-2">
+                                                <span className="text-green-400 mt-1">•</span>
+                                                <span>{recommendation}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

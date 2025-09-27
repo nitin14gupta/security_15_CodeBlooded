@@ -109,6 +109,43 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_mood ON chat_messages(mood);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_response_type ON chat_messages(response_type);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
 
+-- Create collaboration_summaries table for storing AI-generated session summaries
+CREATE TABLE IF NOT EXISTS collaboration_summaries (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    summary_title VARCHAR(255) NOT NULL,
+    summary_content TEXT NOT NULL,
+    key_insights JSONB,
+    mood_analysis JSONB,
+    recommendations JSONB,
+    generated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for collaboration summaries
+CREATE INDEX IF NOT EXISTS idx_collaboration_summaries_session_id ON collaboration_summaries(session_id);
+CREATE INDEX IF NOT EXISTS idx_collaboration_summaries_user_id ON collaboration_summaries(user_id);
+CREATE INDEX IF NOT EXISTS idx_collaboration_summaries_generated_at ON collaboration_summaries(generated_at);
+
+-- Create session_timers table for tracking session duration
+CREATE TABLE IF NOT EXISTS session_timers (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE,
+    total_seconds INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for session timers
+CREATE INDEX IF NOT EXISTS idx_session_timers_session_id ON session_timers(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_timers_user_id ON session_timers(user_id);
+CREATE INDEX IF NOT EXISTS idx_session_timers_is_active ON session_timers(is_active);
+
 -- Insert a default admin user (password: admin123)
 INSERT INTO users (email, name, password_hash, user_type) 
 VALUES (
