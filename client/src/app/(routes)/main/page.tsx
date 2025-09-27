@@ -39,6 +39,17 @@ export default function CareCompanionPage() {
     const [recognition, setRecognition] = useState<any>(null)
     const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown')
 
+    // Enhanced voice features
+    const [selectedVoice, setSelectedVoice] = useState<string>('')
+    const [speechRate, setSpeechRate] = useState(0.9)
+    const [speechPitch, setSpeechPitch] = useState(1.0)
+    const [speechVolume, setSpeechVolume] = useState(0.8)
+    const [voicePersonality, setVoicePersonality] = useState<'neutral' | 'friendly' | 'professional' | 'calming'>('friendly')
+    const [autoSpeak, setAutoSpeak] = useState(false)
+    const [voiceCommands, setVoiceCommands] = useState<string[]>([])
+    const [isVoiceCommandMode, setIsVoiceCommandMode] = useState(false)
+    const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null)
+
     const [sessions, setSessions] = useState<ChatSession[]>([])
     const [currentSession, setCurrentSession] = useState<ChatSession | null>(null)
     const [showNewSessionModal, setShowNewSessionModal] = useState(false)
@@ -145,6 +156,14 @@ export default function CareCompanionPage() {
 
             recognitionInstance.onresult = (event: any) => {
                 const transcript = event.results[0][0].transcript
+
+                // Check if voice commands are enabled and process command
+                if (isVoiceCommandMode && processVoiceCommand(transcript)) {
+                    setIsListening(false)
+                    return
+                }
+
+                // Otherwise, add to input message
                 setInputMessage(prev => prev + (prev ? ' ' : '') + transcript)
                 setIsListening(false)
             }
@@ -474,6 +493,11 @@ export default function CareCompanionPage() {
 
             setMessages(prev => [...prev, aiMessage])
 
+            // Auto-speak AI response if enabled
+            if (autoSpeak) {
+                speakAIResponse(response.ai_response.content, response.ai_response.mood)
+            }
+
             const processingResults = response.processing_results
             if (processingResults.mood_analysis) {
                 setCurrentMood(processingResults.mood_analysis.mood)
@@ -533,36 +557,52 @@ export default function CareCompanionPage() {
         }
     }
 
-    // Text-to-Speech functions
-    const speakText = () => {
-        if (!speechSynthesis || !inputMessage.trim()) return
+    // Enhanced Text-to-Speech functions
+    const speakText = (text?: string) => {
+        const textToSpeak = text || inputMessage.trim()
+        if (!speechSynthesis || !textToSpeak) return
 
         // Stop any current speech
         speechSynthesis.cancel()
 
-        const utterance = new SpeechSynthesisUtterance(inputMessage.trim())
+        const utterance = new SpeechSynthesisUtterance(textToSpeak)
 
-        // Configure voice settings for better quality
-        utterance.rate = 0.9 // Slightly slower for better comprehension
-        utterance.pitch = 1.0 // Normal pitch
-        utterance.volume = 0.8 // Good volume level
+        // Configure voice settings based on personality and user preferences
+        utterance.rate = speechRate
+        utterance.pitch = speechPitch
+        utterance.volume = speechVolume
 
-        // Try to use a high-quality voice if available
+        // Enhanced voice selection based on personality
         const voices = speechSynthesis.getVoices()
-        const preferredVoices = [
-            'Microsoft Zira Desktop - English (United States)',
-            'Microsoft David Desktop - English (United States)',
-            'Google US English',
-            'Alex',
-            'Samantha'
-        ]
-
-        const selectedVoice = voices.find(voice =>
-            preferredVoices.includes(voice.name)
-        ) || voices.find(voice => voice.lang.startsWith('en'))
+        let selectedVoiceObj = null
 
         if (selectedVoice) {
-            utterance.voice = selectedVoice
+            selectedVoiceObj = voices.find(voice => voice.name === selectedVoice)
+        } else {
+            // Personality-based voice selection
+            const voicePreferences = {
+                'friendly': ['Microsoft Zira Desktop - English (United States)', 'Samantha', 'Google US English'],
+                'professional': ['Microsoft David Desktop - English (United States)', 'Alex', 'Daniel'],
+                'calming': ['Microsoft Zira Desktop - English (United States)', 'Samantha', 'Karen'],
+                'neutral': ['Google US English', 'Microsoft Zira Desktop - English (United States)']
+            }
+
+            const preferredVoices = voicePreferences[voicePersonality] || voicePreferences['friendly']
+            selectedVoiceObj = voices.find(voice => preferredVoices.includes(voice.name)) ||
+                voices.find(voice => voice.lang.startsWith('en'))
+        }
+
+        if (selectedVoiceObj) {
+            utterance.voice = selectedVoiceObj
+        }
+
+        // Add emotional tone based on mood
+        if (currentMood === 'sad') {
+            utterance.pitch = Math.max(0.8, speechPitch - 0.2)
+            utterance.rate = Math.max(0.7, speechRate - 0.1)
+        } else if (currentMood === 'happy') {
+            utterance.pitch = Math.min(1.2, speechPitch + 0.1)
+            utterance.rate = Math.min(1.1, speechRate + 0.1)
         }
 
         utterance.onstart = () => setIsSpeaking(true)
@@ -572,10 +612,88 @@ export default function CareCompanionPage() {
         speechSynthesis.speak(utterance)
     }
 
+    // Auto-speak AI responses with mood-based voice
+    const speakAIResponse = (message: string, mood?: string) => {
+        if (autoSpeak && speechSynthesis) {
+            setTimeout(() => speakTextWithMood(message, mood), 500) // Small delay for better UX
+        }
+    }
+
+    // Enhanced speakText with mood parameter
+    const speakTextWithMood = (text: string, mood?: string, messageId?: string) => {
+        if (!speechSynthesis || !text) return
+
+        // Stop any current speech
+        speechSynthesis.cancel()
+
+        const utterance = new SpeechSynthesisUtterance(text)
+
+        // Configure voice settings based on personality and user preferences
+        utterance.rate = speechRate
+        utterance.pitch = speechPitch
+        utterance.volume = speechVolume
+
+        // Enhanced voice selection based on personality
+        const voices = speechSynthesis.getVoices()
+        let selectedVoiceObj = null
+
+        if (selectedVoice) {
+            selectedVoiceObj = voices.find(voice => voice.name === selectedVoice)
+        } else {
+            // Personality-based voice selection
+            const voicePreferences = {
+                'friendly': ['Microsoft Zira Desktop - English (United States)', 'Samantha', 'Google US English'],
+                'professional': ['Microsoft David Desktop - English (United States)', 'Alex', 'Daniel'],
+                'calming': ['Microsoft Zira Desktop - English (United States)', 'Samantha', 'Karen'],
+                'neutral': ['Google US English', 'Microsoft Zira Desktop - English (United States)']
+            }
+
+            const preferredVoices = voicePreferences[voicePersonality] || voicePreferences['friendly']
+            selectedVoiceObj = voices.find(voice => preferredVoices.includes(voice.name)) ||
+                voices.find(voice => voice.lang.startsWith('en'))
+        }
+
+        if (selectedVoiceObj) {
+            utterance.voice = selectedVoiceObj
+        }
+
+        // Add emotional tone based on mood (use provided mood or current mood)
+        const effectiveMood = mood || currentMood
+        if (effectiveMood === 'sad') {
+            utterance.pitch = Math.max(0.8, speechPitch - 0.2)
+            utterance.rate = Math.max(0.7, speechRate - 0.1)
+        } else if (effectiveMood === 'happy') {
+            utterance.pitch = Math.min(1.2, speechPitch + 0.1)
+            utterance.rate = Math.min(1.1, speechRate + 0.1)
+        } else if (effectiveMood === 'supportive') {
+            utterance.pitch = Math.max(0.9, speechPitch - 0.1)
+            utterance.rate = Math.max(0.8, speechRate - 0.05)
+        } else if (effectiveMood === 'curious') {
+            utterance.pitch = Math.min(1.1, speechPitch + 0.05)
+            utterance.rate = Math.min(1.0, speechRate + 0.05)
+        }
+
+        utterance.onstart = () => {
+            setIsSpeaking(true)
+            if (messageId) setSpeakingMessageId(messageId)
+        }
+        utterance.onend = () => {
+            setIsSpeaking(false)
+            setSpeakingMessageId(null)
+        }
+        utterance.onerror = () => {
+            setIsSpeaking(false)
+            setSpeakingMessageId(null)
+        }
+
+        speechSynthesis.speak(utterance)
+    }
+
     const stopSpeaking = () => {
         if (speechSynthesis) {
             speechSynthesis.cancel()
             setIsSpeaking(false)
+            setSpeakingMessageId(null)
         }
     }
 
@@ -618,6 +736,51 @@ export default function CareCompanionPage() {
             recognition.stop()
             setIsListening(false)
         }
+    }
+
+    // Voice commands processing
+    const processVoiceCommand = (transcript: string) => {
+        const command = transcript.toLowerCase().trim()
+
+        // Navigation commands
+        if (command.includes('new session') || command.includes('start new')) {
+            setShowNewSessionModal(true)
+            showSuccess('Voice Command', 'Opening new session dialog')
+            return true
+        }
+
+        if (command.includes('analytics') || command.includes('show analytics')) {
+            setShowAnalytics(true)
+            showSuccess('Voice Command', 'Opening analytics dashboard')
+            return true
+        }
+
+        if (command.includes('stop speaking') || command.includes('stop voice')) {
+            stopSpeaking()
+            showSuccess('Voice Command', 'Stopped speaking')
+            return true
+        }
+
+        if (command.includes('speak') || command.includes('read')) {
+            if (inputMessage.trim()) {
+                speakText()
+                showSuccess('Voice Command', 'Speaking your message')
+                return true
+            }
+        }
+
+        if (command.includes('clear') || command.includes('delete')) {
+            setInputMessage('')
+            showSuccess('Voice Command', 'Cleared input')
+            return true
+        }
+
+        if (command.includes('help') || command.includes('commands')) {
+            showSuccess('Voice Commands', 'Available: "new session", "analytics", "speak", "clear", "help"')
+            return true
+        }
+
+        return false
     }
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -708,6 +871,11 @@ export default function CareCompanionPage() {
             }
 
             setMessages(prev => [...prev, aiMessage])
+
+            // Auto-speak AI response if enabled
+            if (autoSpeak) {
+                speakAIResponse(response.ai_response.content, response.ai_response.mood)
+            }
 
             // Update mood and context from processing results
             const processingResults = response.processing_results
@@ -931,6 +1099,64 @@ export default function CareCompanionPage() {
                                 </div>
                             </div>
 
+                            {/* Voice Settings */}
+                            <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 rounded-2xl p-4 border border-gray-600/40 shadow-lg backdrop-blur-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">Voice Settings</h3>
+                                    <div className="flex items-center space-x-2">
+                                        <div className={`w-2 h-2 rounded-full ${autoSpeak ? 'bg-green-400' : 'bg-gray-500'}`}></div>
+                                        <span className="text-xs text-gray-400">Auto-speak</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {/* Voice Personality */}
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-1">Personality</label>
+                                        <select
+                                            value={voicePersonality}
+                                            onChange={(e) => setVoicePersonality(e.target.value as any)}
+                                            className="w-full p-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        >
+                                            <option value="friendly">Friendly</option>
+                                            <option value="professional">Professional</option>
+                                            <option value="calming">Calming</option>
+                                            <option value="neutral">Neutral</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Auto-speak Toggle */}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-300">Auto-speak AI responses</span>
+                                        <button
+                                            onClick={() => setAutoSpeak(!autoSpeak)}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoSpeak ? 'bg-purple-500' : 'bg-gray-600'
+                                                }`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoSpeak ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+
+                                    {/* Voice Commands Toggle */}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-300">Voice commands</span>
+                                        <button
+                                            onClick={() => setIsVoiceCommandMode(!isVoiceCommandMode)}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isVoiceCommandMode ? 'bg-green-500' : 'bg-gray-600'
+                                                }`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isVoiceCommandMode ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* New Session */}
                             <button
                                 onClick={() => setShowNewSessionModal(true)}
@@ -1139,21 +1365,37 @@ export default function CareCompanionPage() {
                                                         <p className="text-xs opacity-70">
                                                             {message.timestamp.toLocaleTimeString()}
                                                         </p>
-                                                        {message.mood && message.type === 'ai' && (
-                                                            <span className={`text-xs px-2 py-1 rounded-full ${message.mood === 'happy' ? 'bg-green-500/20 text-green-300' :
-                                                                message.mood === 'sad' ? 'bg-blue-500/20 text-blue-300' :
-                                                                    message.mood === 'curious' ? 'bg-yellow-500/20 text-yellow-300' :
-                                                                        message.mood === 'supportive' ? 'bg-purple-500/20 text-purple-300' :
-                                                                            'bg-gray-500/20 text-gray-300'
-                                                                }`}>
-                                                                {message.mood}
-                                                            </span>
-                                                        )}
-                                                        {message.response_type && message.response_type !== 'normal' && (
-                                                            <span className="text-xs px-2 py-1 rounded-full bg-orange-500/20 text-orange-300">
-                                                                {message.response_type}
-                                                            </span>
-                                                        )}
+                                                        <div className="flex items-center space-x-2">
+                                                            {message.mood && message.type === 'ai' && (
+                                                                <span className={`text-xs px-2 py-1 rounded-full ${message.mood === 'happy' ? 'bg-green-500/20 text-green-300' :
+                                                                    message.mood === 'sad' ? 'bg-blue-500/20 text-blue-300' :
+                                                                        message.mood === 'curious' ? 'bg-yellow-500/20 text-yellow-300' :
+                                                                            message.mood === 'supportive' ? 'bg-purple-500/20 text-purple-300' :
+                                                                                'bg-gray-500/20 text-gray-300'
+                                                                    }`}>
+                                                                    {message.mood}
+                                                                </span>
+                                                            )}
+                                                            {message.response_type && message.response_type !== 'normal' && (
+                                                                <span className="text-xs px-2 py-1 rounded-full bg-orange-500/20 text-orange-300">
+                                                                    {message.response_type}
+                                                                </span>
+                                                            )}
+                                                            {message.type === 'ai' && (
+                                                                <button
+                                                                    onClick={() => speakTextWithMood(message.message, message.mood, message.id)}
+                                                                    className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-105 ${speakingMessageId === message.id
+                                                                        ? 'bg-green-500/30 text-green-300 animate-pulse'
+                                                                        : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 hover:text-blue-200'
+                                                                        }`}
+                                                                    title={speakingMessageId === message.id ? "Currently speaking" : "Listen to this response"}
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1218,7 +1460,7 @@ export default function CareCompanionPage() {
                                         </button>
                                         {/* Text-to-Speech Button */}
                                         <button
-                                            onClick={isSpeaking ? stopSpeaking : speakText}
+                                            onClick={isSpeaking ? stopSpeaking : () => speakText()}
                                             disabled={!inputMessage.trim()}
                                             className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${isSpeaking
                                                 ? 'bg-red-500 hover:bg-red-600 text-white'

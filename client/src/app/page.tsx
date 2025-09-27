@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Spline from "@splinetool/react-spline";
 import { useOnboarding } from "@/context/onboardingContext";
+import Link from "next/link";
 
 export default function Home() {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function Home() {
       </div>
 
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-30 p-2 bg-black/10 backdrop-blur-xl border-b border-white/10">
+      <header className="absolute top-0 left-0 right-0 z-30 p-6 bg-black/10 backdrop-blur-xl border-b border-white/10">
         <nav className="flex justify-between items-center max-w-7xl mx-auto">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center shadow-2xl border border-slate-700/50">
@@ -100,9 +101,11 @@ export default function Home() {
               </svg>
             </div>
             <div className="text-3xl font-bold">
-              <span className="bg-gradient-to-r from-slate-100 via-white to-slate-200 bg-clip-text text-transparent tracking-tight">
-                CareCompanion
-              </span>
+              <Link href="/">
+                <span className="bg-gradient-to-r from-slate-100 via-white to-slate-200 bg-clip-text text-transparent tracking-tight">
+                  CareCompanion
+                </span>
+              </Link>
             </div>
           </div>
           <div className="flex items-center space-x-4">
